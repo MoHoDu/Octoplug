@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a1d82200ed7fb284995c76d905c5bf86
+guid: 2c1667536c4775d41b24130fc4c5352e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2381489143348151099
-    second: icon_cold_tag_0
+      213: 6221857846088695789
+    second: one_outline_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 300
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,23 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_cold_tag_0
+      name: one_outline_0
       rect:
         serializedVersion: 2
-        x: 365
-        y: 325
-        width: 520
-        height: 565
+        x: 386
+        y: 7
+        width: 606
+        height: 1033
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5ccb846ed3043fed0800000000000000
-      internalID: -2381489143348151099
+      spriteID: deff7170fba785650800000000000000
+      internalID: 6221857846088695789
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_cold_tag_0: -2381489143348151099
+      one_outline_0: 6221857846088695789
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

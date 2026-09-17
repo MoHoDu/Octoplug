@@ -1,10 +1,22 @@
 fileFormatVersion: 2
-guid: a1d82200ed7fb284995c76d905c5bf86
+guid: f5bbbc5521d2e3840af6bfec3dadc0cc
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2381489143348151099
-    second: icon_cold_tag_0
+      213: 6633891932146689106
+    second: icon_hot_filled_0
+  - first:
+      213: -103252600259790424
+    second: icon_hot_filled_1
+  - first:
+      213: -2987322626127108642
+    second: icon_hot_filled_2
+  - first:
+      213: 1861342904175533378
+    second: icon_hot_filled_3
+  - first:
+      213: 8502217596555583553
+    second: icon_hot_filled_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,23 +125,111 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_cold_tag_0
+      name: icon_hot_filled_0
       rect:
         serializedVersion: 2
-        x: 365
-        y: 325
-        width: 520
-        height: 565
+        x: 72
+        y: 79
+        width: 1123
+        height: 1097
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5ccb846ed3043fed0800000000000000
-      internalID: -2381489143348151099
+      spriteID: 254eeed7091501c50800000000000000
+      internalID: 6633891932146689106
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_hot_filled_1
+      rect:
+        serializedVersion: 2
+        x: 617
+        y: 1101
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a9316f9e4c219ef0800000000000000
+      internalID: -103252600259790424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_hot_filled_2
+      rect:
+        serializedVersion: 2
+        x: 250
+        y: 765
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ed5e43826e5ea86d0800000000000000
+      internalID: -2987322626127108642
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_hot_filled_3
+      rect:
+        serializedVersion: 2
+        x: 217
+        y: 727
+        width: 13
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24d93907281d4d910800000000000000
+      internalID: 1861342904175533378
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: icon_hot_filled_4
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 323
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14065cd7bd1fdf570800000000000000
+      internalID: 8502217596555583553
       vertices: []
       indices: 
       edges: []
@@ -148,7 +248,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_cold_tag_0: -2381489143348151099
+      icon_hot_filled_0: 6633891932146689106
+      icon_hot_filled_1: -103252600259790424
+      icon_hot_filled_2: -2987322626127108642
+      icon_hot_filled_3: 1861342904175533378
+      icon_hot_filled_4: 8502217596555583553
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

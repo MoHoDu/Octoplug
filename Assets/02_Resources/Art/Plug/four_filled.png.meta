@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: a1d82200ed7fb284995c76d905c5bf86
+guid: e0a91fa533985dd4486fda68fd8a9d33
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2381489143348151099
-    second: icon_cold_tag_0
+      213: 1467959139975079037
+    second: four_filled_0
+  - first:
+      213: -8621202995660210560
+    second: four_filled_1
+  - first:
+      213: 9217393806689626545
+    second: four_filled_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +57,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 300
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,23 +119,67 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_cold_tag_0
+      name: four_filled_0
       rect:
         serializedVersion: 2
-        x: 365
-        y: 325
-        width: 520
-        height: 565
+        x: 209
+        y: 41
+        width: 666
+        height: 1173
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5ccb846ed3043fed0800000000000000
-      internalID: -2381489143348151099
+      spriteID: d74a00b6f0d3f5410800000000000000
+      internalID: 1467959139975079037
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: four_filled_1
+      rect:
+        serializedVersion: 2
+        x: 948
+        y: 242
+        width: 24
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08eb3237d855b5880800000000000000
+      internalID: -8621202995660210560
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: four_filled_2
+      rect:
+        serializedVersion: 2
+        x: 971
+        y: 272
+        width: 11
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b9ee92d4d2caef70800000000000000
+      internalID: 9217393806689626545
       vertices: []
       indices: 
       edges: []
@@ -148,7 +198,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_cold_tag_0: -2381489143348151099
+      four_filled_0: 1467959139975079037
+      four_filled_1: -8621202995660210560
+      four_filled_2: 9217393806689626545
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

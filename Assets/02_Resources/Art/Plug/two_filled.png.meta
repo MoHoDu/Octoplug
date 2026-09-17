@@ -1,10 +1,22 @@
 fileFormatVersion: 2
-guid: a1d82200ed7fb284995c76d905c5bf86
+guid: 7b4995d42d448a74698c483a0b156eef
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2381489143348151099
-    second: icon_cold_tag_0
+      213: -3344783833580327227
+    second: two_filled_0
+  - first:
+      213: 6835683414144810559
+    second: two_filled_1
+  - first:
+      213: -5800212020343507683
+    second: two_filled_2
+  - first:
+      213: 1525922748099303299
+    second: two_filled_3
+  - first:
+      213: -4338380446909022925
+    second: two_filled_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +63,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 300
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,23 +125,111 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_cold_tag_0
+      name: two_filled_0
       rect:
         serializedVersion: 2
-        x: 365
-        y: 325
-        width: 520
-        height: 565
+        x: 161
+        y: 95
+        width: 885
+        height: 937
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5ccb846ed3043fed0800000000000000
-      internalID: -2381489143348151099
+      spriteID: 5cea9f423d0f491d0800000000000000
+      internalID: -3344783833580327227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: two_filled_1
+      rect:
+        serializedVersion: 2
+        x: 938
+        y: 110
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3e712129d93dde50800000000000000
+      internalID: 6835683414144810559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: two_filled_2
+      rect:
+        serializedVersion: 2
+        x: 938
+        y: 98
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d157979f5e1818fa0800000000000000
+      internalID: -5800212020343507683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: two_filled_3
+      rect:
+        serializedVersion: 2
+        x: 945
+        y: 101
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 387952b97aa2d2510800000000000000
+      internalID: 1525922748099303299
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: two_filled_4
+      rect:
+        serializedVersion: 2
+        x: 946
+        y: 111
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33dbc7128f9fac3c0800000000000000
+      internalID: -4338380446909022925
       vertices: []
       indices: 
       edges: []
@@ -148,7 +248,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_cold_tag_0: -2381489143348151099
+      two_filled_0: -3344783833580327227
+      two_filled_1: 6835683414144810559
+      two_filled_2: -5800212020343507683
+      two_filled_3: 1525922748099303299
+      two_filled_4: -4338380446909022925
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
