@@ -21,6 +21,11 @@
 
 -
 
+## AI Setup Allowed
+
+- Reward UI prefab
+- Temporary test objects
+
 ## Exclusive Assets
 
 - None
@@ -36,3 +41,4 @@
 ## Verification State
 
 - Not started
+- Verification: HUMAN_VERIFY_REQUIRED

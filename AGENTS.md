@@ -41,6 +41,8 @@ If no current Task exists, use the `create-task` procedure. Do not start gamepla
 - Git: `harness/policies/git-workflow.md`
 - Task lifecycle: `harness/policies/task-lifecycle.md`
 - Context budget: `harness/policies/context-budget.md`
+- Click/Drag/Touch/UI 기능은 `harness/policies/runtime-interaction-validation.md`를 따른다.
+- 구현 전 사람이 먼저 준비해야 할 Scene/Prefab/UI가 부족하면 `harness/policies/human-setup-required.md`를 따른다.
 
 Roles live under `harness/roles/`. Policies take precedence over role descriptions and skills.
 
