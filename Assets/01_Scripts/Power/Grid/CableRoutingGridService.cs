@@ -26,18 +26,62 @@ namespace Octoplug.Power.Grid
         private LayerMask doorMask;
 
         private CableRoutingGrid grid;
+        private bool hasBuiltOnce;
 
-        public CableRoutingGrid Grid => grid ??= new CableRoutingGrid(cellSize);
+        /// <summary>
+        /// Convenience scene-wide access so Cable routing does not need to
+        /// search the scene for this service. Set on the first instance to
+        /// wake up; there is expected to be exactly one per loaded scene.
+        /// </summary>
+        public static CableRoutingGridService Instance { get; private set; }
+
+        /// <summary>
+        /// The grid, guaranteed to have been built at least once before it
+        /// is returned — Unity does not order different GameObjects'
+        /// Start() calls, so a consumer's Start() may run before this
+        /// service's own Start() does.
+        /// </summary>
+        public CableRoutingGrid Grid
+        {
+            get
+            {
+                EnsureBuilt();
+                return grid;
+            }
+        }
+
+        private void Awake()
+        {
+            Instance = this;
+            grid = new CableRoutingGrid(cellSize);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
 
         private void Start()
         {
-            RebuildFromScene();
+            EnsureBuilt();
+        }
+
+        private void EnsureBuilt()
+        {
+            if (!hasBuiltOnce)
+            {
+                RebuildFromScene();
+            }
         }
 
         /// <summary>Rebuilds the grid from every RoomArea currently loaded in the scene.</summary>
         public void RebuildFromScene()
         {
-            Grid.Clear();
+            grid.Clear();
+            hasBuiltOnce = true;
 
 #if UNITY_2023_1_OR_NEWER
             var rooms = Object.FindObjectsByType<RoomArea>(FindObjectsSortMode.None);
@@ -59,18 +103,18 @@ namespace Octoplug.Power.Grid
             }
 
             var bounds = room.FloorArea.bounds;
-            Grid.MarkArea(bounds, GridCellState.Walkable);
+            grid.MarkArea(bounds, GridCellState.Walkable);
 
             var wallHits = Physics2D.OverlapAreaAll(bounds.min, bounds.max, wallMask);
             foreach (var hit in wallHits)
             {
-                Grid.MarkArea(hit.bounds, GridCellState.Blocked);
+                grid.MarkArea(hit.bounds, GridCellState.Blocked);
             }
 
             var doorHits = Physics2D.OverlapAreaAll(bounds.min, bounds.max, doorMask);
             foreach (var hit in doorHits)
             {
-                Grid.MarkArea(hit.bounds, GridCellState.Door);
+                grid.MarkArea(hit.bounds, GridCellState.Door);
             }
         }
     }
