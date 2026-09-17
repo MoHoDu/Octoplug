@@ -100,6 +100,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7461029572030762014}
+  - component: {fileID: 7536328872371439889}
   m_Layer: 0
   m_Name: Induction
   m_TagString: Untagged
@@ -126,6 +127,20 @@ Transform:
   - {fileID: 5848841555166794194}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7536328872371439889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9107956989276310765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbae0ebd4f002284d8840b5db23e0411, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.ApplianceSource
+  powerConsumptionWatts: 0
+  cable: {fileID: 6117094328644695175}
 --- !u!1001 &2401550798113809928
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -507,6 +522,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: cd2682ee666395d4cab237861dbf64b8, type: 3}
+--- !u!114 &6117094328644695175 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1602058252936024809, guid: cd2682ee666395d4cab237861dbf64b8, type: 3}
+  m_PrefabInstance: {fileID: 4818833596377753198}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d6d9c56899e5854e9377520f01f6d5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.CableInfo
 --- !u!4 &7842091234295194712 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3317846646696362550, guid: cd2682ee666395d4cab237861dbf64b8, type: 3}

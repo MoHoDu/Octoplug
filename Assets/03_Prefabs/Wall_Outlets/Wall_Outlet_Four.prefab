@@ -76,6 +76,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9193901956265356116}
+  - component: {fileID: 8311454536661432255}
   m_Layer: 0
   m_Name: Socket
   m_TagString: Untagged
@@ -98,6 +99,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8923846370886315124}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8311454536661432255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5517396082699682944}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+  connectedPlug: {fileID: 0}
 --- !u!1 &5733263868409019077
 GameObject:
   m_ObjectHideFlags: 0
@@ -107,6 +121,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 622449215794450727}
+  - component: {fileID: 722905341740366971}
   m_Layer: 0
   m_Name: Socket (1)
   m_TagString: Untagged
@@ -129,6 +144,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8923846370886315124}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &722905341740366971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5733263868409019077}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+  connectedPlug: {fileID: 0}
 --- !u!1 &7120114612938915268
 GameObject:
   m_ObjectHideFlags: 0
@@ -138,6 +166,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7853565329927111490}
+  - component: {fileID: 3926723175200797203}
   m_Layer: 0
   m_Name: Socket (2)
   m_TagString: Untagged
@@ -160,6 +189,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8923846370886315124}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3926723175200797203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7120114612938915268}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+  connectedPlug: {fileID: 0}
 --- !u!1 &8272959175253311534
 GameObject:
   m_ObjectHideFlags: 0
@@ -260,6 +302,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3155645649829022415}
+  - component: {fileID: 7440693686231863145}
   m_Layer: 0
   m_Name: Wall_Outlet_Four
   m_TagString: Untagged
@@ -284,6 +327,23 @@ Transform:
   - {fileID: 8923846370886315124}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7440693686231863145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8514593742884922755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01729a2cc378e2f429afe45989816145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.WallOutlet
+  sockets:
+  - {fileID: 8311454536661432255}
+  - {fileID: 722905341740366971}
+  - {fileID: 3926723175200797203}
+  - {fileID: 2150436686265310304}
 --- !u!1 &8997859545111210785
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,6 +353,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3930752244432586793}
+  - component: {fileID: 2150436686265310304}
   m_Layer: 0
   m_Name: Socket (3)
   m_TagString: Untagged
@@ -315,3 +376,16 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8923846370886315124}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2150436686265310304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8997859545111210785}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+  connectedPlug: {fileID: 0}

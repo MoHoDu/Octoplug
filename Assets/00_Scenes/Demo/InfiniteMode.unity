@@ -1385,6 +1385,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1858351218}
+  - component: {fileID: 1858351220}
+  - component: {fileID: 1858351219}
   m_Layer: 0
   m_Name: ConnectionDirector
   m_TagString: Untagged
@@ -1407,6 +1409,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1798720376}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1858351219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1858351217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80c7cc775d2a26d40a4b84d95d73372a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Grid.CableRoutingGridService
+  cellSize: 0.25
+  wallMask:
+    serializedVersion: 2
+    m_Bits: 256
+  doorMask:
+    serializedVersion: 2
+    m_Bits: 512
+--- !u!114 &1858351220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1858351217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 277acbb9127682440a67c13c43db733f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.HousePowerBudget
+  allowedPowerWatts: 0
 --- !u!1 &1961123000
 GameObject:
   m_ObjectHideFlags: 0
