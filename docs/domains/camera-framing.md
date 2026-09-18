@@ -63,6 +63,7 @@ The concept document does not define production Camera behavior. The current imp
 
 - [Room Generation](room-generation.md) supplies `HintRoomCreated` and actual `RoomLayout`/`RoomPlacement` bounds.
 - Infinite Mode will eventually own production Camera integration; this domain currently does not modify `InfiniteMode.unity`.
+- `Octoplug.Power.Input.PointerInteractionResolver` (Connection/Power domain, introduced in `TASK-20260918-007`, currently active) is a **separate, independent pointer-ownership system** from `CameraPanInteractionResolver` — a static, frame-scoped capture-and-latch resolver with its own priority (Plug → UI → Socket → PowerStrip Head → Product → empty) that `PlugDragInput` itself now registers/captures/releases against. It is not aware of `CameraPanInteractionResolver`, and vice versa. Production Integration must merge these into one authoritative pointer-ownership structure; until then, do not assume `CameraPanInteractionResolver`'s classification of Plug/Socket/PowerStrip Head/Product agrees with production's actual interaction priority.
 
 ## Modification Cautions
 
@@ -85,6 +86,8 @@ The concept document does not define production Camera behavior. The current imp
 
 ## Open Decisions
 
+- **Production Integration Preflight must be re-run** against the then-current `feat/infinity-power-connection` once `TASK-20260918-007` (currently active, actively changing pointer-interaction structure) is committed/pushed and merged into it. A Preflight taken before that lands does not reflect the real merge target.
+- **`Assets/00_Scenes/Demo/RoomGenerationTest.unity` is not a production copy target.** Only the pure core (`Assets/01_Scripts/CameraFraming/`), the Unity adapter/controller pattern (`CameraZoomInputReader`, `CameraPanInputReader`, `CameraPanInteractionResolver`, `HouseCameraZoomController`, `HouseCameraPanController`, `RoomGenerationCameraFramingBridge`), and the pure test suites carry forward. Production integration means wiring these fresh against `InfiniteMode.unity`'s actual Camera/scene structure at that time (which has not been inspected for this purpose and will have moved since this Task), not copying the scene.
 - Production transfer into `InfiniteMode.unity` and production Camera ownership.
 - Any automatic Camera relocation; current Hint behavior remains zoom-only after manual Pan.
 - Cinematic/session-level framing beyond the copied validation scene.

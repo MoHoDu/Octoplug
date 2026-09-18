@@ -62,9 +62,25 @@ The concept document describes procedural room generation and unlocking a new ro
 
 ## Planned, Not Established
 
-- Production transfer of the copied binder/controller pattern into the then-current `Room.prefab` and `InfiniteMode.unity` after their current Exclusive Asset owner releases them.
+- **Production Integration Preflight must be re-run** against the then-current `feat/infinity-power-connection` once `TASK-20260918-007` (PowerStrip Placement + Drag + Power Chain, currently active) is committed/pushed and merged into it. `TASK-20260918-007` is actively changing pointer-interaction structure (`PointerInteractionResolver`, `HeadDragInput`, `PowerStrip`), so any Preflight taken before that lands does not reflect the real merge target.
+- **Room Generation must not create a second production grid.** Room Generation Core (`RoomBounds2D`/`RoomLayout`, world-unit, grid-independent by design) must connect to the *existing* production grid, not a parallel one:
+  `RoomPlan` → existing `CableRoutingGrid`/`GridPathfinder` → Wall/Door cell updates → `CableRoutingGridService` rebuild.
+  This connection is unimplemented; it is a required step of the future Production Integration Task, not an Open Decision to relitigate.
+- Production transfer of the copied binder/controller pattern into the then-current `Room.prefab` and `InfiniteMode.unity` after their current Exclusive Asset owner releases them. **`Assets/00_Scenes/Demo/RoomGenerationTest.unity` and `Assets/03_Prefabs/Rooms/Room_RoomGenTest.prefab` are not production copy targets** — nothing in either file is meant to be duplicated into `InfiniteMode.unity`/`Room.prefab`. Only these carry forward: the pure core (`Assets/01_Scripts/RoomGeneration/`), the `RoomGenerationRoomBinder` binder pattern, the `RoomGenerationTestController` controller pattern, the Camera adapter/controller pattern (see [Camera Framing](camera-framing.md)), and the pure test suites. Production integration means **re-wiring these patterns fresh against whatever `InfiniteMode.unity`/`Room.prefab` actually look like at that time** (their structure will have moved since this Task; do not assume it matches the copied test assets), not copying scene/prefab files.
 - Production candidate construction and ordering; the deterministic balanced ordering is established only for the copied validation integration.
 - Production Door policy ownership; the copied validation integration measures the authored Door and wall geometry and uses the widest-safe-interval midpoint policy.
-- Progression/session orchestration, Resident/Product/Socket activation, routing-grid rebuild, camera framing, and no-successor behavior.
+- Progression/session orchestration, Resident/Product/Socket activation, camera framing, and no-successor behavior.
 - Approved resize-safe locked-room hatching art.
 - Persistence and deterministic seed ownership.
+
+## Future Production / Game Flow Integration
+
+Not implemented; recorded so a later Game Flow Task does not let Room Generation absorb responsibilities that belong to session orchestration.
+
+- Room Generation must stay a request/response service: it creates/promotes Rooms only when asked, and never itself decides *when* a Room should unlock. That decision belongs to a future `GameManager`/`GameFlowController`.
+- Expected shape of the boundary (exact names may differ once implemented against the production controller):
+  - `GameManager` → `PromoteCurrentHint()` (promote the exact stored hint plan; today's equivalent is `RoomGenerationTestController.PromoteStoredPlanAndPlanFollowing()`), and a distinct `CreateNextHint()`-style entry point if promotion and planning-the-next-hint ever need to be triggered independently instead of together.
+  - Room Generation → `HintRoomCreated` (already established; unchanged) tells the outside world a hint now exists — it does not push UI or progression state.
+- Room Generation must **not**: compute EXP, judge Level Up, judge Reward eligibility, or write to `UI_RoomInfo`/`GameStatusInfo` directly.
+- The intended future loop, owned entirely outside Room Generation: Resident Demand resolved → Satisfaction/EXP increases → Level Up judged → Reward if applicable → existing Hint Room unlocked (Room Generation promotes it) → next Hint Room created (Room Generation plans it) → unlocked Room count updated → Game Status UI updated.
+- `UI_RoomInfo` reads the authoritative unlocked-Room-count state from `GameManager`/a UI coordinator, not from Room Generation directly. `GameStatusInfo` reads authoritative EXP/Level state the same way. Room Generation exposes state (`RoomGenerationState`/`UnlockedLayout`) for that reader to consume; it does not write to either UI prefab itself.
