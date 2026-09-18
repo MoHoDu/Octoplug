@@ -14,7 +14,13 @@ namespace Octoplug.Power.Cable
     /// authored LineRenderer design values.
     ///
     /// Collinear points are merged so a straight run stays one segment
-    /// instead of one LineRenderer point per grid cell.
+    /// instead of one LineRenderer point per grid cell. This never touches
+    /// the two genuine sub-cell endpoint corrections (Origin's/the
+    /// Socket's exact continuous position vs. the nearest grid cell
+    /// center) — those are handled once, surgically, in
+    /// <see cref="Octoplug.Power.Cable.CableRoutingController.AppendOrthogonalJog"/>,
+    /// so every interior point here is already a real, 8-direction-aligned
+    /// A* grid cell and is never merged away.
     /// </summary>
     public class CablePathRenderer : MonoBehaviour
     {
@@ -68,7 +74,7 @@ namespace Octoplug.Power.Cable
             }
         }
 
-        /// <summary>Removes interior points that do not change direction from the polyline.</summary>
+        /// <summary>Removes interior points that do not change direction from the polyline (including near-duplicate points, whose in/out segment is ~zero length).</summary>
         private static List<Vector2> Simplify(IReadOnlyList<Vector2> points)
         {
             if (points.Count <= 2)
@@ -84,8 +90,8 @@ namespace Octoplug.Power.Cable
                 var current = points[i];
                 var next = points[i + 1];
 
-                var incoming = (current - previous);
-                var outgoing = (next - current);
+                var incoming = current - previous;
+                var outgoing = next - current;
 
                 if (incoming.sqrMagnitude < 1e-8f || outgoing.sqrMagnitude < 1e-8f)
                 {

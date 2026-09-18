@@ -59,12 +59,16 @@ namespace Octoplug.Power.Cable
                 return;
             }
 
-            // LineRenderer's Tile UV.x runs 0 (Origin end) -> max (Plug end).
-            // Increasing mainTextureOffset.x samples further along that UV
-            // at each fixed world point, which visually slides the pattern
-            // toward decreasing UV (Plug -> Origin). Subtracting instead
-            // gives the requested Origin -> Plug flow direction.
-            scrollOffset -= scrollSpeed * Time.deltaTime;
+            // LineRenderer's Tile UV.x runs 0 (Origin end) -> max (Plug/Socket
+            // end). Increasing mainTextureOffset.x samples further along
+            // that UV at each fixed world point, which visually slides the
+            // pattern toward decreasing UV — i.e. Plug/Socket -> Origin,
+            // the direction power actually flows (from the supplying
+            // Socket toward the consuming Product/PowerStrip body). This
+            // never touches path geometry — Base and Flow keep sharing the
+            // exact same points; only which way the texture appears to
+            // travel along them changes.
+            scrollOffset += scrollSpeed * Time.deltaTime;
             var material = GetRuntimeMaterial();
             if (material == null)
             {

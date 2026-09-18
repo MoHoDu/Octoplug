@@ -27,3 +27,37 @@ Before a commit is requested:
 3. Run `git diff --check`.
 4. Confirm no secrets, generated Unity state, or unrelated user work are included.
 5. Update the handoff and Domain Map when durable ownership or navigation changed.
+
+## Commit / Push Rule
+
+Task 완료 시:
+
+1. git status 확인
+2. git diff --stat 확인
+3. 주요 diff 검토
+4. Task 범위 외 변경이 있으면 분리하거나 사용자에게 보고
+5. Task 문서 최종 갱신
+6. commit
+7. 현재 Task branch를 origin에 push
+8. local HEAD와 remote HEAD 일치 확인
+9. working tree clean 여부 확인
+
+권장 commit 형식:
+
+<type>: <task summary>
+
+예:
+feat: complete 8-direction cable routing
+fix: resolve plug socket reconnection
+ui: refine product info display
+
+## Exception
+
+다음 경우 자동 commit/push 하지 않는다.
+
+- 사용자가 명시적으로 금지한 경우
+- Merge conflict가 있는 경우
+- Task 범위 외 변경이 섞여 있는 경우
+- Secret / .env / 개인 설정이 포함된 경우
+- Human Verification이 아직 필요한 경우
+- 테스트 실패가 남아 있는 경우

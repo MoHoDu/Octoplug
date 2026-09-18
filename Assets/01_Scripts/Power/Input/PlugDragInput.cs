@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -37,7 +38,38 @@ namespace Octoplug.Power.Input
         public event Action<Vector2> Dragged;
         public event Action DragEnded;
 
+        /// <summary>
+        /// Raised whenever any Plug (any Product) starts a drag — used by
+        /// <see cref="Octoplug.Power.UI.ProductTooltipController"/> to close
+        /// itself the instant a Plug is grabbed, without holding a direct
+        /// reference to every Plug or Product.
+        /// </summary>
+        public static event Action AnyDragStarted;
+
         public bool IsDragging { get; private set; }
+
+        private static readonly List<PlugDragInput> ActiveInstances = new();
+
+        /// <summary>
+        /// Whether <paramref name="worldPos"/> is over any enabled Plug's
+        /// hit collider — used by
+        /// <see cref="Octoplug.Power.UI.ProductClickInput"/> to give Plug
+        /// dragging priority over Product-tooltip clicks when the two
+        /// visually overlap, so grabbing a Plug is never misread as
+        /// clicking the Product it sits on.
+        /// </summary>
+        public static bool IsPointerOverAnyPlug(Vector2 worldPos)
+        {
+            foreach (var instance in ActiveInstances)
+            {
+                if (instance.hitCollider != null && instance.hitCollider.OverlapPoint(worldPos))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private void Awake()
         {
@@ -45,6 +77,16 @@ namespace Octoplug.Power.Input
             {
                 hitCollider = GetComponent<Collider2D>();
             }
+        }
+
+        private void OnEnable()
+        {
+            ActiveInstances.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveInstances.Remove(this);
         }
 
         private void Update()
@@ -64,6 +106,7 @@ namespace Octoplug.Power.Input
                 {
                     IsDragging = true;
                     DragStarted?.Invoke();
+                    AnyDragStarted?.Invoke();
                 }
 
                 return;
