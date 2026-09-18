@@ -9,7 +9,13 @@
 # Define macros (only works in top-level gitattributes files)
 [attr]lfs               filter=lfs diff=lfs merge=lfs -text
 [attr]unity-json        eol=lf linguist-language=json
-[attr]unity-yaml        merge=unityyamlmerge eol=lf linguist-language=yaml
+# -whitespace: Unity always serializes a MonoBehaviour's own m_Name as a blank,
+# trailing-space field, so `git diff --check` (used by scripts/verify-fast.ps1)
+# would otherwise fail on any legitimate, engine-generated scene/prefab/asset
+# edit that adds or touches a component. This is Unity's own output, not
+# human-authored whitespace, so whitespace hygiene is intentionally not
+# enforced on unity-yaml files.
+[attr]unity-yaml        merge=unityyamlmerge eol=lf linguist-language=yaml -whitespace
 
 # Optionally collapse Unity YAML files on GitHub diffs
 # [attr]unity-yaml        merge=unityyamlmerge text linguist-language=yaml linguist-generated

@@ -37,6 +37,13 @@ namespace Octoplug.RoomGeneration.Unity
         private IntegerRoomSize[] coreRoomSizes;
         private bool initialized;
 
+        /// <summary>
+        /// Raised whenever a new hint room is stored (initial setup and every promotion). Carries
+        /// only the hint's placement; subscribers such as camera framing read anything else they
+        /// need from <see cref="State"/>. Room Generation does not know that a camera exists.
+        /// </summary>
+        public event Action<RoomPlacement> HintRoomCreated;
+
         public RoomGenerationState State => state;
 
         private void Start()
@@ -121,6 +128,7 @@ namespace Octoplug.RoomGeneration.Unity
             }
 
             state = state.StoreNextPlan(result.Plan);
+            HintRoomCreated?.Invoke(state.NextRoomPlan.Room);
         }
 
         private IReadOnlyList<RoomCandidate> BuildFollowingCandidates(RoomLayout layout)
