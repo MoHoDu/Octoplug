@@ -16,18 +16,19 @@ Historical checklist preserved in `history/2026-09-20-pre-wall-outlet-todo.md`.
 - [x] Audit `InfiniteMode.unity`: exactly one unified Wall Outlet; no legacy GUID; parent `Wall_Outlets`; sibling index 0; name `Wall_Outlet`; local transform `(4, 1, 0)`, Z `90°`, scale `(1, 1, 1)`; initial count 1; Socket01–05/layout assigned; House `8 / 22`; scene remains clean with no new unstaged scene diff.
 - [x] Document the unified production source and deferred `CreateWallOutlet(wall, position, socketCount)` Room Generation contract without implementing it.
 
-## Human Verification — required before completion
+## Human Verification — PASS 7/7 (2026-09-20)
 
-- [ ] `1 → 2 → 3 → 4 → 5` grows one module at a time.
-- [ ] Visible and usable Socket counts always match.
-- [ ] Products A/B remain connected through `2 → 3`; only Socket03 is added.
-- [ ] Wall Socket magnetic snap remains easy from the room side.
-- [ ] Inactive Sockets never highlight, snap, or connect.
-- [ ] Opposite-side connection and Cable-through-Wall remain impossible; cross-room routes remain Door-only.
-- [ ] House allowance remains unchanged while Socket count increases.
+- [x] `1 → 2 → 3 → 4 → 5` grows one module at a time.
+- [x] Visible and usable Socket counts always match.
+- [x] Products A/B remain connected through `2 → 3`; only Socket03 is added.
+- [x] Wall Socket magnetic snap remains easy from the room side.
+- [x] Inactive Sockets never highlight, snap, or connect.
+- [x] Opposite-side connection and Cable-through-Wall remain impossible; cross-room routes remain Door-only.
+- [x] House allowance remains unchanged while Socket count increases.
 
-## Stop conditions
+## Completion
 
-- Status remains `active / HUMAN_VERIFY_REQUIRED` until the user explicitly reports PASS.
-- Do not implement Reward System, persistence, production Room Generation, production gameplay upgrade UI, Wall Outlet Cable/Plug/drag/local allowance/PowerInfo, or socket-count decrease.
-- Do not modify/delete legacy Wall Outlet prefabs, hand-edit Unity YAML, reset/discard unrelated work, commit, push, move the Task to DONE, or claim completion before Human Verification PASS.
+- [x] User explicitly reported Human Verification PASS for all seven checks.
+- [x] Implementation changes were committed and pushed by the user (`88cc436`).
+- [x] TASK-007 moved to `tasks/done/`.
+- Reward System, persistence, production Room Generation, production gameplay upgrade UI, Wall Outlet Cable/Plug/drag/local allowance/PowerInfo, and socket-count decrease remain out of scope.

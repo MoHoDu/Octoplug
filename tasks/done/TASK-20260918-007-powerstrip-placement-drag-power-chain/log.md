@@ -163,3 +163,11 @@ A matching Unity Pipeline port file still identifies this exact isolated worktre
 - Preserved verified runtime evidence: source `1→5` **PASS**; connected `2→3` identity/connections/Usage/Powered/Flow **PASS**; inactive-socket exclusion **PASS**; blocked expansion atomic rollback/reservation integrity **PASS**; `3→2` rejected with `SocketCountDecreaseUnsupported`; runtime Allowed Power stayed `7` throughout.
 - Recorded exact check labels: build **PASS** (0 warnings/errors); Unity `recompile` `up_to_date`; matching-Editor `verify-unity` **PASS**; zero Unity tests = **NO_PROJECT_TESTS**; real pointer input = **HUMAN_VERIFY_REQUIRED**. `verify-fast.ps1` is **FAIL** (exit 1) only at Unity-generated trailing whitespace in `Assets/03_Prefabs/Multitaps/Multitap.prefab`; it is not claimed PASS and the prefab YAML was not manually cleaned.
 - A pre-commit scope audit found that `InfiniteMode.unity` does not match the earlier "migration unexecuted" wording: its uncommitted diff contains an incomplete migration attempt, with two legacy prefab instances absent and only one new-source generic `Multitap` present (`initialSocketCount=3`, `initialAllowedPowerWatts=3`). This fails the required two-instance/name/transform/capacity preservation, so the scene is excluded from the checkpoint commit and is not treated as completed migration. Resolution still requires an explicit decision to restore only the incomplete migration portion while preserving legitimate House budget data, or authorize a correct two-for-two Editor migration and readback. Wall Outlet single-prefab work has not started in TASK-007.
+
+## 2026-09-20 — Completion
+
+- The user reported Human Verification PASS for all seven unified Wall Outlet checks.
+- Automated verification remained PASS: build, Unity compile, 11/11 EditMode tests, runtime verification, reliable Console delta with zero new errors/warnings, and verify-fast.
+- The user committed and pushed the implementation (`88cc436 feat: add wall outlet socket addition system`).
+- TASK-007 was marked DONE and moved from `tasks/active/` to `tasks/done/`.
+- Reward System, persistence, production Room Generation, gameplay upgrade UI, and socket-count decrease remain deferred/out of scope.
