@@ -35,6 +35,15 @@ namespace Octoplug.Power
 
         public bool IsConnected => connectedPlug != null;
 
+        public bool IsActiveSocket
+        {
+            get
+            {
+                var owner = GetComponentInParent<PowerStrip>();
+                return owner == null || owner.IsSocketActive(this);
+            }
+        }
+
         public Transform ConnectorTransform => transform;
 
         public PlugConnector ConnectedPlug => connectedPlug;
@@ -102,6 +111,11 @@ namespace Octoplug.Power
         /// </summary>
         public bool IsPointerInInteractionArea(Vector2 worldPos)
         {
+            if (!IsActiveSocket)
+            {
+                return false;
+            }
+
             if (interactionCollider != null)
             {
                 return interactionCollider.OverlapPoint(worldPos);

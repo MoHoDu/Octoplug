@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 3793982156770980515}
   - component: {fileID: 9177814760449093970}
   - component: {fileID: 572241933546682071}
+  - component: {fileID: 2510513521909667574}
   m_Layer: 0
   m_Name: Multitap
   m_TagString: Untagged
@@ -51,11 +52,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbd7400050ee26a40a352b76118eac06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.PowerStrip
-  allowedPowerWatts: 3
+  initialAllowedPowerWatts: 3
+  initialSocketCount: 1
   maxAllowedPowerWatts: 10
   cable: {fileID: 4197630571588908711}
   sockets:
   - {fileID: 3489803800200848687}
+  - {fileID: 165321875176609093}
+  - {fileID: 5663078490599016056}
+  - {fileID: 6421323321567332982}
+  - {fileID: 9179267337055420845}
+  socketLayout: {fileID: 2510513521909667574}
+  placementFootprint: {fileID: 9177814760449093970}
 --- !u!114 &3793982156770980515
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68,7 +76,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56f9c2c239ec1c143be1872a6c2fc4ce, type: 3}
   m_Name: PowerStripHeadController
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Cable.PowerStripHeadController
-  headDragInput: {fileID: 0}
+  headDragInput: {fileID: 7853301074700077700}
   ownCableController: {fileID: 5551616988393119147}
   placementFootprint: {fileID: 9177814760449093970}
   nearestPlacementSearchRadius: 24
@@ -87,6 +95,7 @@ MonoBehaviour:
   boundsCollider: {fileID: 572241933546682071}
   boundsRenderer: {fileID: 1868305155438619644}
   fallbackSize: {x: 1, y: 1}
+  powerStripLayout: {fileID: 2510513521909667574}
 --- !u!61 &572241933546682071
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -133,6 +142,66 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1.3927764, y: 1.1035203}
   m_EdgeRadius: 0
+--- !u!114 &2510513521909667574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8514593742884922755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c964b5c05743c6e42a3a3b8b14f10dd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.PowerStripSocketLayout
+  powerInfo: {fileID: 4760349292047453328}
+  modules:
+  - socket: {fileID: 3489803800200848687}
+    whole: {fileID: 8096954285846037160}
+    end: {fileID: 4179673071676763890}
+    moduleColliders:
+    - {fileID: 4488691219203899753}
+    - {fileID: 3804293442844056069}
+    terminalColliders:
+    - {fileID: 6507122619242017900}
+    hasAuthoredPowerInfoPosition: 1
+    powerInfoLocalPosition: {x: -0.23, y: 0.5, z: 0}
+  - socket: {fileID: 165321875176609093}
+    whole: {fileID: 3102333609504487837}
+    end: {fileID: 6965403123944294358}
+    moduleColliders:
+    - {fileID: 2274305636067264113}
+    terminalColliders:
+    - {fileID: 6812546034951909647}
+    hasAuthoredPowerInfoPosition: 1
+    powerInfoLocalPosition: {x: -0.46, y: 0.5, z: 0}
+  - socket: {fileID: 5663078490599016056}
+    whole: {fileID: 3763204667895191123}
+    end: {fileID: 5676749001287326753}
+    moduleColliders:
+    - {fileID: 4648636758320298144}
+    terminalColliders:
+    - {fileID: 3643903952428543112}
+    hasAuthoredPowerInfoPosition: 1
+    powerInfoLocalPosition: {x: -0.69, y: 0.5, z: 0}
+  - socket: {fileID: 6421323321567332982}
+    whole: {fileID: 5620656412644056660}
+    end: {fileID: 6604483001340235852}
+    moduleColliders:
+    - {fileID: 8877332770636321322}
+    terminalColliders:
+    - {fileID: 4948789599448721273}
+    hasAuthoredPowerInfoPosition: 1
+    powerInfoLocalPosition: {x: -0.92, y: 0.5, z: 0}
+  - socket: {fileID: 9179267337055420845}
+    whole: {fileID: 8774756261539506055}
+    end: {fileID: 8639690031653502111}
+    moduleColliders:
+    - {fileID: 8705485663076925627}
+    terminalColliders:
+    - {fileID: 7699185493337195887}
+    hasAuthoredPowerInfoPosition: 1
+    powerInfoLocalPosition: {x: -1.15, y: 0.5, z: 0}
 --- !u!1001 &1313929469699306188
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -571,6 +640,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3155645649829022415}
     m_Modifications:
+    - target: {fileID: 1152396554155089773, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243207514679331773, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: socketLayout
+      value: 
+      objectReference: {fileID: 2510513521909667574}
+    - target: {fileID: 3898129335195237798, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4051135067934009022, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6682904054938086016, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -611,9 +696,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7706508120476022948, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8486788307292510058, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8791141900884262342, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
       propertyPath: m_Name
       value: Head
+      objectReference: {fileID: 0}
+    - target: {fileID: 8935028645759086539, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -628,6 +725,122 @@ SpriteRenderer:
 --- !u!4 &2107902748551670713 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6682904054938086016, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &2274305636067264113 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 6805294558219503432, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3102333609504487837 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7706508120476022948, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &3643903952428543112 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 8317876810155224497, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3763204667895191123 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8486788307292510058, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &3804293442844056069 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 8445699625087048508, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &4179673071676763890 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8935028645759086539, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &4488691219203899753 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 9202471783682768976, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &4648636758320298144 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 107507179005082009, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &4948789599448721273 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 383674988884796992, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5620656412644056660 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1152396554155089773, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5676749001287326753 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1097025180849347864, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &6507122619242017900 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 1996016295836104021, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6604483001340235852 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1898656440275063157, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &6812546034951909647 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 2266912820583608374, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6965403123944294358 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2401723212921521903, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &7699185493337195887 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 3109656236746048598, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7853301074700077700 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3243207514679331773, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad119c09aa7e3364f9a8accf651f24a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Input.HeadDragInput
+--- !u!1 &8096954285846037160 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3576032596314407825, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8639690031653502111 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3898129335195237798, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &8705485663076925627 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 4120422725838897538, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8774756261539506055 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4051135067934009022, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
+--- !u!61 &8877332770636321322 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 4236806067714102035, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
   m_PrefabInstance: {fileID: 4755440245152399673}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8049933176715233342
@@ -678,18 +891,67 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2636574063883007459, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4209000738820057892, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
       propertyPath: m_Name
       value: Sockets
+      objectReference: {fileID: 0}
+    - target: {fileID: 5702482086856558745, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9110031704259336236, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9175079301001866803, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+--- !u!114 &165321875176609093 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7925293885406748027, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+  m_PrefabInstance: {fileID: 8049933176715233342}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
 --- !u!114 &3489803800200848687 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6906654324554329361, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+  m_PrefabInstance: {fileID: 8049933176715233342}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+--- !u!114 &5663078490599016056 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2386996248246816326, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+  m_PrefabInstance: {fileID: 8049933176715233342}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
+--- !u!114 &6421323321567332982 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3938965329346921032, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
   m_PrefabInstance: {fileID: 8049933176715233342}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
@@ -703,3 +965,14 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 389732496126104212, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
   m_PrefabInstance: {fileID: 8049933176715233342}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &9179267337055420845 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1212687180279220627, guid: 5c3e9b7bf21f1da4b86b42ad4eb7a1f8, type: 3}
+  m_PrefabInstance: {fileID: 8049933176715233342}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b144856f1f1a57b469f204fad83cda58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector

@@ -9,8 +9,8 @@
 - **Base:** dev
 - **Branch:** task/TASK-20260918-007-ui-integration (isolated task worktree)
 - **Started:** 2026-09-18
-- **Updated:** 2026-09-19 (finalized power-balance values)
-- **Current Stage:** Finalized power-balance data applied; HUMAN_VERIFY_REQUIRED. House current/max allowance is 8/22. Independent PowerStrip current allowances are 3/3/4/5/5 (`One` through `Five`), with an independent per-strip maximum of 10. Socket count remains separate. Reward/upgrade behavior is not implemented. Interaction/Head Drag/Socket UX/Cable routing remain untouched in this balance-only pass.
+- **Updated:** 2026-09-19 (single-prefab ActiveSocketCount source and runtime integration matrices verified)
+- **Current Stage:** The approved single-`Multitap.prefab` source now has persistent Socket01–05 identities, finalized count-specific PowerInfo positions, an automated 1→5 source-prefab matrix, and a passing connected-state/rollback/inactive-topology runtime integration matrix. InfiniteMode legacy-instance migration and real pointer verification remain pending. Unity project-test discovery found zero tests (`NO_PROJECT_TESTS`). Existing drag, connection, cable, power-chain, and UI behavior is regression-protected. Socket count remains independent from Allowed Power. Reward selection/UI/probability/generation remains out of scope. Final status remains HUMAN_VERIFY_REQUIRED.
 - **Current Skill:** implement-code / integrate-unity-editor
 
 ## Context
@@ -81,7 +81,10 @@ Checked live scene state (Play mode + `eval`) before writing any code:
 - `Assets/01_Scripts/Power/SocketConnector.cs`
 - New: `Assets/01_Scripts/Power/Connection/ConnectionFailureReason.cs`
 - `Assets/01_Scripts/Power/Cable/PowerStripHeadController.cs`
-- `Assets/03_Prefabs/Multitaps/Multitap_{One,Two,Three,Four,Five}.prefab` (component/reference/wiring only — Collider2D + HeadDragInput on `Head`, head-controller on root, `PowerStrip.sockets` reference fix, `allowedPowerWatts` placeholder value — no visual/layout/Sorting Order change)
+- `Assets/03_Prefabs/Multitaps/Multitap_{One,Two,Three,Four,Five}.prefab` (legacy sources remain in place; no deletion in the ActiveSocketCount pass)
+- `Assets/03_Prefabs/Multitaps/Multitap.prefab` (new single PowerStrip Source of Truth; component/reference/state wiring only)
+- `Assets/03_Prefabs/Multitaps/Head.prefab` (existing Whole01–05/End/BoxCollider2D reference and initial-active-state wiring only)
+- `Assets/03_Prefabs/Multitaps/Sockets.prefab` (existing Socket01–05 reference and initial-active-state wiring only)
 - `Assets/00_Scenes/Demo/InfiniteMode.unity` (existing `ConnectionDirector` component/reference binding only; no UI object placement or visual property changes)
 - New: `Assets/01_Scripts/Power/UI/PowerUiCoordinator.cs` and `.meta`
 - UI prefab sources are inspection-only and must remain serialized-diff clean: `Assets/03_Prefabs/UI/{UI_GameInfo,HousePowerInfo,GameStatusInfo,UI_AlertText,UI_RoomInfo,UI_SettingBtn}.prefab`
@@ -118,6 +121,9 @@ Checked live scene state (Play mode + `eval`) before writing any code:
 ## Open Decisions
 
 - None for current/maximum power-balance values. Future Reward System mechanics and the PowerStrip UI expansion from 5 to 10 icons remain separate scoped work.
+- **ActiveSocketCount expansion placement failure:** runtime will fail atomically in place with no state change. Player-facing feedback and whether a future action may search/move to a nearby legal position require a Human Decision.
+- **Socket-count decreases:** current Reward design is increase-only. Every decrease is explicitly rejected with `SocketCountDecreaseUnsupported`, without disconnecting or partially updating. Any future decrease workflow requires a separately scoped Human Decision.
+- **PowerInfo positions for counts 1–5:** finalized and authored in `Multitap.prefab` as `(-0.23, 0.5)`, `(-0.46, 0.5)`, `(-0.69, 0.5)`, `(-0.92, 0.5)`, and `(-1.15, 0.5)`. This is no longer `HUMAN_SETUP_REQUIRED`; code must continue to consume these authored values without bounds-based inference.
 
 ## Verification State
 

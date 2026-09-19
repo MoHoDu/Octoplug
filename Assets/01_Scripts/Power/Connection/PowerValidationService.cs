@@ -55,6 +55,12 @@ namespace Octoplug.Power.Connection
                 return false;
             }
 
+            if (!targetSocket.IsActiveSocket)
+            {
+                failureReason = ConnectionFailureReason.SocketInactive;
+                return false;
+            }
+
             if (house != null)
             {
                 var prospectiveHouseProducts = new HashSet<ApplianceSource>();
@@ -124,6 +130,12 @@ namespace Octoplug.Power.Connection
                 return true;
             }
 
+            if (!targetSocket.IsActiveSocket)
+            {
+                failureReason = ConnectionFailureReason.SocketInactive;
+                return false;
+            }
+
             var targetStrip = targetSocket.GetComponentInParent<PowerStrip>();
             if (targetStrip == null)
             {
@@ -153,7 +165,7 @@ namespace Octoplug.Power.Connection
             }
 
             var strip = socket.GetComponentInParent<PowerStrip>();
-            return strip == null || strip.IsPowered;
+            return strip == null || strip.IsSocketActive(socket) && strip.IsPowered;
         }
 
         private static void CollectHouseProducts(
@@ -239,7 +251,7 @@ namespace Octoplug.Power.Connection
                 return;
             }
 
-            foreach (var socket in strip.Sockets)
+            foreach (var socket in strip.ActiveSockets)
             {
                 if (socket == null)
                 {
@@ -336,7 +348,7 @@ namespace Octoplug.Power.Connection
                 return true;
             }
 
-            foreach (var socket in from.Sockets)
+            foreach (var socket in from.ActiveSockets)
             {
                 var plug = socket != null ? socket.ConnectedPlug : null;
                 var child = plug != null ? plug.GetComponentInParent<PowerStrip>() : null;
@@ -353,7 +365,9 @@ namespace Octoplug.Power.Connection
         {
             var plug = strip != null && strip.Cable != null ? strip.Cable.Plug : null;
             var socket = plug != null ? plug.ConnectedSocket : null;
-            return socket != null ? socket.GetComponentInParent<PowerStrip>() : null;
+            return socket != null && socket.IsActiveSocket
+                ? socket.GetComponentInParent<PowerStrip>()
+                : null;
         }
     }
 }

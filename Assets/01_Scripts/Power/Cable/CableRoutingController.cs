@@ -356,7 +356,7 @@ namespace Octoplug.Power.Cable
                 return;
             }
 
-            foreach (var socket in strip.Sockets)
+            foreach (var socket in strip.ActiveSockets)
             {
                 var plug = socket != null ? socket.ConnectedPlug : null;
                 if (plug == null)
@@ -1208,6 +1208,7 @@ namespace Octoplug.Power.Cable
             foreach (var candidate in candidates)
             {
                 if (!candidate.isActiveAndEnabled
+                    || !candidate.IsActiveSocket
                     || candidate.IsConnected
                     || !candidate.IsPointerOnApproachSide(fromPosition))
                 {

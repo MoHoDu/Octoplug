@@ -12,5 +12,6 @@ namespace Octoplug.Power.Connection
         PowerStripPowerExceeded,
         SelfConnection,
         CircularConnection,
+        SocketInactive,
     }
 }

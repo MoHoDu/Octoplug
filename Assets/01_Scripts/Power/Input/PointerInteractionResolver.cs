@@ -205,7 +205,9 @@ namespace Octoplug.Power.Input
             var bestInstanceId = int.MaxValue;
             foreach (var socket in sockets)
             {
-                if (socket == null || !socket.IsPointerInInteractionArea(worldPos))
+                if (socket == null
+                    || !socket.IsActiveSocket
+                    || !socket.IsPointerInInteractionArea(worldPos))
                 {
                     continue;
                 }

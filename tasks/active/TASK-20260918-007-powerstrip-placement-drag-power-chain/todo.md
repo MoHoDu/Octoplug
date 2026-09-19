@@ -170,3 +170,40 @@ Original scope and the previous priority/capture, disconnected-only movement, ne
 
 - PowerStrip `PowerInfo` is already bound and now displays every finalized initial allowance correctly with its current 5-icon pool. Expanding the pool to 10 is deferred until the separate upgrade/UI-capacity pass; do not clamp or let icon count mutate Allowed Power.
 - Head-drag beyond the Strip's own Cable Length: no enforcement either way (unchanged from prior phases).
+
+## M. Feedback & Verification Fixes (2026-09-19)
+
+- [x] Initial allowed power values verified: `House` = 8, `Multitap_One` = 3, `Multitap_Two` = 3. Prefab serialized, scene override absence, and Play Mode runtime values all matched the design correctly.
+- [x] Changed Head drag eligibility rule: `HeadDragInput` and `PowerStripHeadController` updated. A PowerStrip Head can now be dragged as long as it has no downstream Socket connections, even if its own Plug is connected upstream.
+- [x] Verified Head drag with upstream connection preserves the Plug position at the socket, maintains connection state, and visually reroutes the cable correctly.
+- [x] Automated Verification PASS. Recompile 0 errors. Runtime power values PASS.
+- [x] Architecture Audit completed: Read-only evaluation of future "Socket +1" Reward System. Recommended **Socket activation (Option C)** using a single fully-sized prefab and `ActiveSocketCount` state, avoiding complex component identity and reference breakage.
+
+## Q. Single-prefab ActiveSocketCount follow-up (2026-09-19)
+
+- [x] Added independent serialized `InitialSocketCount` and `InitialAllowedPowerWatts`, plus authoritative runtime `ActiveSocketCount` and `AllowedPowerWatts`; capacity changes never mutate allowance.
+- [x] Added atomic increase-only `TrySetActiveSocketCount` with typed non-UX failures, same-count no-op, explicit rejection of every decrease, prospective placement preflight, and topology refresh only after commit.
+- [x] Added `PowerStripSocketLayout` with explicit ordered references to persistent Socket01–05, Whole01–05, End objects, authored module colliders, authored terminal-only colliders, PowerInfo, and exact count positions.
+- [x] Updated hit testing and placement footprint calculation to use Inspector-authored child `BoxCollider2D` Size/Offset data. Count N includes active module geometry and only WholeN's terminal End geometry; Renderer bounds are not used for variable PowerStrip geometry.
+- [x] Defended every inactive-socket entry point: pointer resolver, magnetic acquisition, validation, final Connect mutation, usage/cycle traversal, powered-source checks, downstream propagation, and Head movement eligibility.
+- [x] Wired `Assets/03_Prefabs/Multitaps/Multitap.prefab` through the matching isolated Unity Editor: five persistent sockets, five modules, exact authored colliders (Whole01 also includes First; each terminal includes its End), layout/footprint/input/controller references, and initial count-1 active state.
+- [x] Verified prefab readback: initial Allowed=3, initial count=1, maximum Allowed=10, `sockets=array[5]`, all new references non-null. `dotnet build --no-restore` and Unity `recompile_status` both completed with 0 warnings/errors.
+- [x] Authored exact PowerInfo local positions for counts 1–5 in the source prefab: `(-0.23, 0.5)`, `(-0.46, 0.5)`, `(-0.69, 0.5)`, `(-0.92, 0.5)`, `(-1.15, 0.5)`. No scale/sprite/layout/hierarchy/color change.
+- [x] Ran the automated source-prefab 1→2→3→4→5 matrix: sequential Whole/Socket state, First/terminal-only End state, exact PowerInfo positions, persistent PowerStrip and Socket identities, Allowed Power held at runtime value `7`, authored collider composition, and footprint-cell growth all PASS. Same-count no-op and 5→4 `SocketCountDecreaseUnsupported` also PASS.
+- [x] Ran remaining runtime integration and rollback coverage in an ephemeral matching-Editor verifier: real Product A/B connections across 2→3 preserved PowerStrip/Socket/PowerInfo identities, both physical connections, Usage, Powered, Flow, and runtime Allowed Power `7`; Socket03 became available. Inactive Socket04 was excluded from pointer hit, magnetic selection, direct Connect, validation, source-live, usage, and cycle traversal. A blocked 3→4 prospective expansion returned `PlacementUnavailable`, retained every old reservation, leaked no candidate reservation, and preserved count/visual/PowerInfo/connections/Allowed/Usage/Powered/Flow. 3→2 returned `SocketCountDecreaseUnsupported` with no mutation.
+- [x] Ran matching-Editor Unity verification: exact project path, Unity 6000.3.9f1, ready, compile stopped, Play stopped, `InfiniteMode` clean. Unity project-test discovery found zero tests: `NO_PROJECT_TESTS` (not PASS).
+- [x] Recorded the exact automated status without overclaiming: build **PASS** (0 warnings/errors), Unity `recompile` `up_to_date`, matching-Editor `verify-unity` **PASS**, and zero Unity tests = **NO_PROJECT_TESTS**.
+- [ ] `verify-fast.ps1` is **FAIL** (exit 1) only at Unity-serialized trailing spaces in `Assets/03_Prefabs/Multitaps/Multitap.prefab` (`m_Name: ` / empty override value). Do not claim PASS and do not hand-edit prefab YAML to clean it.
+- [ ] Focused Human Interaction Verification remains **HUMAN_VERIFY_REQUIRED**; reflection/direct-method checks are not real pointer-input PASS.
+- [x] Recorded the single persistent source contract: `Multitap.prefab` owns Socket01–05, Whole01–05, Cable/Plug, PowerInfo and binding; capacity changes never runtime replace/instantiate/destroy them.
+- [x] Recorded separate authority for `ActiveSocketCount`, `AllowedPowerWatts`, and `CableInfo.CableLength`. Cable Length strengthening is roadmap direction only; no upgrade implementation or coupling is complete.
+- [ ] Demo scene migration is not complete or verified. The current uncommitted `InfiniteMode.unity` diff contains an incomplete migration attempt (two legacy instances absent, only one new-source generic `Multitap` present with count 3), so it fails the required instance/name/transform/capacity preservation and is excluded from the checkpoint commit. A corrected Unity Editor migration script preserves name/parent/sibling/local transform, per-instance initial Allowed Power, and legacy capacity from authored Socket count, then saves and reads back the scene. Before scene mutation, explicitly decide whether to restore only the incomplete migration portion while preserving legitimate House budget data, or authorize the correct two-for-two migration and saving `Assets/00_Scenes/Demo/InfiniteMode.unity`; legacy prefab assets remain untouched.
+- [ ] Wall Outlet single-prefab work has not started. Do not begin it in this Task state.
+
+## Next actions (current)
+
+1. Run focused real-pointer Human Verification for the single-prefab Multitap interaction; keep status `HUMAN_VERIFY_REQUIRED` until that is completed.
+2. Ask for explicit authorization naming replacement of legacy Multitap instances and saving `Assets/00_Scenes/Demo/InfiniteMode.unity`.
+3. After authorization only, run the prepared Editor migration and read back source/count/transform/Allowed/clean-state invariants.
+4. Re-run build, Unity recompile, matching-Editor `verify-unity`, project-test discovery, and `verify-fast`; preserve **NO_PROJECT_TESTS** and any real FAIL exactly.
+5. Do not start Wall Outlet single-prefab work, Reward work, or CableLength strengthening in this scope.

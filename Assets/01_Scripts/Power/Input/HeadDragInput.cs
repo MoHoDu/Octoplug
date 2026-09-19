@@ -4,36 +4,15 @@ using UnityEngine.InputSystem;
 namespace Octoplug.Power.Input
 {
     /// <summary>
-    /// Mouse drag input for a PowerStrip's own "Head" collider — deliberately
-    /// the same detection idiom as <see cref="PlugDragInput"/> (reads the
-    /// pointer through <see cref="Mouse"/>, hit-tests this GameObject's own
-    /// Collider2D directly): the explicit, Inspector-sized Collider2D is the
-    /// single source of truth for "what did the pointer hit," exactly like
-    /// every other interaction target in this project (Plug, Product). No
-    /// runtime bounds/padding computation from a Renderer — Size/Offset are
-    /// tuned by hand in the Prefab, the same way a Plug or Product's hit
-    /// collider already is.
-    ///
-    /// Eligibility ("can this actually be grabbed?") is checked only once,
-    /// at Pointer Down (<see cref="CanStartDragAt"/>) — never re-evaluated
-    /// for the rest of the drag. Once <see cref="PointerInteractionResolver"/>
-    /// captures this input it is held unconditionally until Pointer Up;
-    /// nothing here can spontaneously release it mid-drag.
-    ///
-    /// Kept as a separate, distinct capability from Plug-drag: only a
-    /// PowerStrip's Head is draggable this way — Wall Outlet and Product
-    /// never get this component — so a Head grab is never misreported as a
-    /// Plug grab to <see cref="Octoplug.Power.UI.ProductTooltipController"/>
-    /// or <see cref="Octoplug.Power.UI.ProductClickInput"/>. Reports pointer
-    /// world-space position only; placement legality is
-    /// <see cref="Octoplug.Power.Cable.PowerStripHeadController"/>'s job.
+    /// Mouse drag input for a PowerStrip Head. The active modules' explicit,
+    /// Inspector-sized child BoxCollider2D geometry is the hit-test authority;
+    /// Renderer bounds are never used. Eligibility is checked once on pointer
+    /// down and capture remains held until pointer up.
     /// </summary>
-    [RequireComponent(typeof(Collider2D))]
     public class HeadDragInput : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("The Head's own click/drag hit area. Defaults to this GameObject's own Collider2D. Size/Offset are hand-tuned per Prefab — never computed from a Renderer at runtime.")]
-        private Collider2D hitCollider;
+        private PowerStripSocketLayout socketLayout;
 
         public event System.Action<Vector2> DragStarted;
         public event System.Action<Vector2> Dragged;
@@ -43,12 +22,6 @@ namespace Octoplug.Power.Input
 
         private PowerStrip owner;
 
-        /// <summary>
-        /// Pointer-Down-only eligibility check: this Head is a valid capture
-        /// candidate iff the pointer is over its hit collider AND the owning
-        /// strip is fully disconnected right now. Never called again for the
-        /// remainder of an active drag.
-        /// </summary>
         internal bool CanStartDragAt(Vector2 worldPos)
         {
             return ContainsPoint(worldPos) && IsOwnerDisconnected();
@@ -56,23 +29,21 @@ namespace Octoplug.Power.Input
 
         internal bool ContainsPoint(Vector2 worldPos)
         {
-            return isActiveAndEnabled && hitCollider != null && hitCollider.OverlapPoint(worldPos);
+            return isActiveAndEnabled
+                && owner != null
+                && socketLayout != null
+                && socketLayout.ContainsPoint(owner.ActiveSocketCount, worldPos);
         }
 
         internal float SqrDistanceToHitCenter(Vector2 worldPos)
         {
-            return hitCollider != null
-                ? ((Vector2)hitCollider.bounds.center - worldPos).sqrMagnitude
+            return owner != null && socketLayout != null
+                ? socketLayout.SqrDistanceToHitCenter(owner.ActiveSocketCount, worldPos)
                 : float.PositiveInfinity;
         }
 
         private void Awake()
         {
-            if (hitCollider == null)
-            {
-                hitCollider = GetComponent<Collider2D>();
-            }
-
             owner = GetComponentInParent<PowerStrip>();
         }
 
@@ -108,19 +79,9 @@ namespace Octoplug.Power.Input
                 return;
             }
 
-            // Once captured, held unconditionally until Pointer Up — no
-            // per-frame eligibility/ownership re-check here. A previous
-            // version re-ran IsOwnerDisconnected() every dragged frame and
-            // silently released capture the instant it returned false; that
-            // is exactly the class of "capture drops mid-drag" bug this
-            // design rules out by construction (eligibility is a Pointer
-            // Down-only decision — see CanStartDragAt/OnDragStarted).
-            if (mouse.leftButton.isPressed)
+            if (mouse.leftButton.isPressed && TryGetPointerWorldPosition(out var dragPos))
             {
-                if (TryGetPointerWorldPosition(out var dragPos))
-                {
-                    Dragged?.Invoke(dragPos);
-                }
+                Dragged?.Invoke(dragPos);
             }
 
             if (mouse.leftButton.wasReleasedThisFrame)
@@ -138,15 +99,9 @@ namespace Octoplug.Power.Input
                 return false;
             }
 
-            var plug = owner.Cable != null ? owner.Cable.Plug : null;
-            if (plug == null || plug.IsConnected)
+            foreach (var socket in owner.ActiveSockets)
             {
-                return false;
-            }
-
-            foreach (var socket in owner.Sockets)
-            {
-                if (socket == null || socket.IsConnected)
+                if (socket.IsConnected)
                 {
                     return false;
                 }

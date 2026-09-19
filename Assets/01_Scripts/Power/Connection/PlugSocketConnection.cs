@@ -23,7 +23,7 @@ namespace Octoplug.Power.Connection
         /// </summary>
         public static bool Connect(PlugConnector plug, SocketConnector socket)
         {
-            if (plug == null || socket == null)
+            if (plug == null || socket == null || !socket.IsActiveSocket)
             {
                 return false;
             }
@@ -53,6 +53,15 @@ namespace Octoplug.Power.Connection
         public static void Disconnect(PlugConnector plug)
         {
             DisconnectInternal(plug, true);
+        }
+
+        /// <summary>
+        /// Notifies graph-derived presenters and powered-state refresh paths that
+        /// effective topology changed without replacing a Plug/Socket pairing.
+        /// </summary>
+        public static void NotifyTopologyChanged()
+        {
+            GraphChanged?.Invoke();
         }
 
         private static bool DisconnectInternal(

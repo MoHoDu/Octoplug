@@ -10,40 +10,45 @@ namespace Octoplug.Power.Grid
     public class PlacementFootprint : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("Preferred source of the placement bounds.")]
+        [Tooltip("Preferred source of the placement bounds for fixed-size objects.")]
         private Collider2D boundsCollider;
 
         [SerializeField]
-        [Tooltip("Optional bounds source used when no Collider2D is assigned.")]
+        [Tooltip("Optional bounds source used by fixed-size objects when no Collider2D is assigned.")]
         private Renderer boundsRenderer;
 
         [SerializeField]
-        [Tooltip("Local-space fallback size used when neither source is assigned.")]
+        [Tooltip("Local-space fallback size used by fixed-size objects when neither source is assigned.")]
         private Vector2 fallbackSize = Vector2.one;
+
+        [SerializeField]
+        [Tooltip("Optional authored variable-size geometry for a PowerStrip.")]
+        private PowerStripSocketLayout powerStripLayout;
 
         private readonly List<GridCoord> reservedCells = new();
         private readonly List<GridCoord> candidateCells = new();
+        private readonly List<GridCoord> colliderCells = new();
+        private readonly List<BoxCollider2D> activeColliders = new();
+        private readonly HashSet<GridCoord> uniqueCells = new();
         private CableRoutingGrid reservedGrid;
+        private PowerStrip powerStrip;
 
         public Bounds WorldBounds
         {
             get
             {
-                if (boundsCollider != null)
+                if (powerStripLayout != null && powerStrip != null)
                 {
-                    return boundsCollider.bounds;
+                    return GetWorldBounds(powerStrip.ActiveSocketCount, transform.position);
                 }
 
-                if (boundsRenderer != null)
-                {
-                    return boundsRenderer.bounds;
-                }
-
-                var worldSize = Vector3.Scale(
-                    new Vector3(fallbackSize.x, fallbackSize.y, 0f),
-                    transform.lossyScale);
-                return new Bounds(transform.position, worldSize);
+                return GetFixedWorldBounds();
             }
+        }
+
+        private void Awake()
+        {
+            powerStrip = GetComponent<PowerStrip>();
         }
 
         private void OnEnable()
@@ -53,14 +58,18 @@ namespace Octoplug.Power.Grid
 
         private void Start()
         {
-            // CableRoutingGridService runs first and performs its authoritative
-            // scene rebuild in Start. Retry once here in case this footprint's
-            // OnEnable ran before its initial bounds were reservable; never poll
-            // or churn placement ownership every frame.
-            if (reservedGrid == null)
+            var service = CableRoutingGridService.Instance;
+            var grid = service != null ? service.Grid : null;
+            if (grid == null)
             {
                 TryInitializeReservation();
+                return;
             }
+
+            // Component Awake order on one GameObject is not authoritative.
+            // Refresh once after every Awake so a PowerStrip reservation uses its
+            // initialized ActiveSocketCount rather than the fixed-size fallback.
+            TryReserveAt(grid, transform.position);
         }
 
         private void OnDisable()
@@ -73,21 +82,58 @@ namespace Octoplug.Power.Grid
             Vector2 candidateRootPosition,
             List<GridCoord> results)
         {
+            var socketCount = powerStrip != null ? powerStrip.ActiveSocketCount : 0;
+            GetCoveredCells(grid, candidateRootPosition, socketCount, results);
+        }
+
+        public void GetCoveredCells(
+            CableRoutingGrid grid,
+            Vector2 candidateRootPosition,
+            int socketCount,
+            List<GridCoord> results)
+        {
             results.Clear();
             if (grid == null)
             {
                 return;
             }
 
-            var bounds = WorldBounds;
+            if (powerStripLayout == null || socketCount <= 0)
+            {
+                var bounds = GetFixedWorldBounds();
+                bounds.center += (Vector3)(candidateRootPosition - (Vector2)transform.position);
+                grid.GetCellsCoveredByBounds(bounds, results);
+                return;
+            }
+
+            uniqueCells.Clear();
+            powerStripLayout.GetColliders(socketCount, activeColliders);
             var rootDelta = candidateRootPosition - (Vector2)transform.position;
-            bounds.center += (Vector3)rootDelta;
-            grid.GetCellsCoveredByBounds(bounds, results);
+            for (var i = 0; i < activeColliders.Count; i++)
+            {
+                var bounds = GetAuthoredWorldBounds(activeColliders[i]);
+                bounds.center += (Vector3)rootDelta;
+                colliderCells.Clear();
+                grid.GetCellsCoveredByBounds(bounds, colliderCells);
+                for (var cellIndex = 0; cellIndex < colliderCells.Count; cellIndex++)
+                {
+                    if (uniqueCells.Add(colliderCells[cellIndex]))
+                    {
+                        results.Add(colliderCells[cellIndex]);
+                    }
+                }
+            }
         }
 
         public bool CanReserveAt(CableRoutingGrid grid, Vector2 rootPosition)
         {
-            GetCoveredCells(grid, rootPosition, candidateCells);
+            var socketCount = powerStrip != null ? powerStrip.ActiveSocketCount : 0;
+            return CanReserveAt(grid, rootPosition, socketCount);
+        }
+
+        public bool CanReserveAt(CableRoutingGrid grid, Vector2 rootPosition, int socketCount)
+        {
+            GetCoveredCells(grid, rootPosition, socketCount, candidateCells);
             if (candidateCells.Count == 0)
             {
                 return false;
@@ -104,18 +150,33 @@ namespace Octoplug.Power.Grid
             return true;
         }
 
-        /// <summary>
-        /// Atomically replaces this owner's reservation when every candidate
-        /// cell is valid. Invalid placement leaves the prior reservation intact.
-        /// </summary>
         public bool TryReserveAt(CableRoutingGrid grid, Vector2 rootPosition)
         {
-            if (grid == null || !CanReserveAt(grid, rootPosition))
+            var socketCount = powerStrip != null ? powerStrip.ActiveSocketCount : 0;
+            return TryReserveAt(grid, rootPosition, socketCount);
+        }
+
+        /// <summary>
+        /// Atomically replaces this owner's reservation after every prospective
+        /// authored cell has been validated. A failure leaves the old cells owned.
+        /// </summary>
+        public bool TryReserveAt(CableRoutingGrid grid, Vector2 rootPosition, int socketCount)
+        {
+            if (grid == null || !CanReserveAt(grid, rootPosition, socketCount))
             {
                 return false;
             }
 
-            ReleaseReservation();
+            var previousGrid = reservedGrid;
+            if (previousGrid != null)
+            {
+                for (var i = 0; i < reservedCells.Count; i++)
+                {
+                    previousGrid.SetObjectOccupied(reservedCells[i], this, false);
+                }
+            }
+
+            reservedCells.Clear();
             reservedGrid = grid;
             for (var i = 0; i < candidateCells.Count; i++)
             {
@@ -124,6 +185,31 @@ namespace Octoplug.Power.Grid
             }
 
             return reservedCells.Count > 0;
+        }
+
+        public Bounds GetWorldBounds(int socketCount, Vector2 candidateRootPosition)
+        {
+            if (powerStripLayout == null || socketCount <= 0)
+            {
+                var fixedBounds = GetFixedWorldBounds();
+                fixedBounds.center += (Vector3)(candidateRootPosition - (Vector2)transform.position);
+                return fixedBounds;
+            }
+
+            powerStripLayout.GetColliders(socketCount, activeColliders);
+            if (activeColliders.Count == 0)
+            {
+                return new Bounds(candidateRootPosition, Vector3.zero);
+            }
+
+            var aggregate = GetAuthoredWorldBounds(activeColliders[0]);
+            for (var i = 1; i < activeColliders.Count; i++)
+            {
+                aggregate.Encapsulate(GetAuthoredWorldBounds(activeColliders[i]));
+            }
+
+            aggregate.center += (Vector3)(candidateRootPosition - (Vector2)transform.position);
+            return aggregate;
         }
 
         public void ReleaseReservation()
@@ -138,6 +224,36 @@ namespace Octoplug.Power.Grid
 
             reservedCells.Clear();
             reservedGrid = null;
+        }
+
+        private Bounds GetFixedWorldBounds()
+        {
+            if (boundsCollider != null)
+            {
+                return boundsCollider.bounds;
+            }
+
+            if (boundsRenderer != null)
+            {
+                return boundsRenderer.bounds;
+            }
+
+            var worldSize = Vector3.Scale(
+                new Vector3(fallbackSize.x, fallbackSize.y, 0f),
+                transform.lossyScale);
+            return new Bounds(transform.position, worldSize);
+        }
+
+        private static Bounds GetAuthoredWorldBounds(BoxCollider2D collider)
+        {
+            var half = collider.size * 0.5f;
+            var offset = collider.offset;
+            var first = collider.transform.TransformPoint(offset + new Vector2(-half.x, -half.y));
+            var bounds = new Bounds(first, Vector3.zero);
+            bounds.Encapsulate(collider.transform.TransformPoint(offset + new Vector2(-half.x, half.y)));
+            bounds.Encapsulate(collider.transform.TransformPoint(offset + new Vector2(half.x, -half.y)));
+            bounds.Encapsulate(collider.transform.TransformPoint(offset + new Vector2(half.x, half.y)));
+            return bounds;
         }
 
         private void TryInitializeReservation()

@@ -4,7 +4,10 @@ using Octoplug.Power.Grid;
 namespace Octoplug.Power.Cable
 {
     /// <summary>
-    /// Moves a fully disconnected PowerStrip. Deliberately mirrors
+    /// Moves a PowerStrip whose Sockets have no downstream connections.
+    /// The strip's own Plug may still be connected upstream — in that case
+    /// the Plug stays fixed at its Socket and only the Head (plus Cable
+    /// route) moves. Deliberately mirrors
     /// <see cref="Octoplug.Power.Input.PlugDragInput"/>'s own drag feel: once
     /// captured (a decision made exactly once, at Pointer Down — see
     /// <see cref="Octoplug.Power.Input.HeadDragInput"/>), the root follows
@@ -77,18 +80,17 @@ namespace Octoplug.Power.Cable
         }
 
         /// <summary>
-        /// Eligibility ("can this be grabbed at all?") and the grab offset
+        /// Eligibility (\"can this be grabbed at all?\") and the grab offset
         /// are both decided exactly once, here — never re-derived from live
         /// state for the remainder of the drag. This is the one place
-        /// <see cref="IsFullyDisconnected"/> is consulted; a connected Plug
-        /// or Socket reached mid-drag (which cannot actually happen from
-        /// this strip's own drag alone) is not re-checked, matching
+        /// <see cref="HasNoDownstreamConnections"/> is consulted; once
+        /// captured, no per-frame re-check occurs, matching
         /// <see cref="Octoplug.Power.Input.HeadDragInput"/>'s own
         /// once-at-pointer-down capture contract.
         /// </summary>
         private void OnDragStarted(Vector2 pointerDownWorldPos)
         {
-            dragAllowed = IsFullyDisconnected();
+            dragAllowed = HasNoDownstreamConnections();
             if (!dragAllowed)
             {
                 return;
@@ -134,7 +136,7 @@ namespace Octoplug.Power.Cable
         /// place; an invalid one snaps to the deterministic nearest valid
         /// Grid anchor, or — if none exists — restores the exact drag-start
         /// transform. Neither this method nor <see cref="OnDragged"/>
-        /// re-checks <see cref="IsFullyDisconnected"/>: eligibility was
+        /// re-checks <see cref="HasNoDownstreamConnections"/>: eligibility was
         /// already decided once, at <see cref="OnDragStarted"/>.
         /// </summary>
         private void OnDragEnded()
@@ -288,23 +290,22 @@ namespace Octoplug.Power.Cable
             return false;
         }
 
-        private bool IsFullyDisconnected()
+        /// <summary>
+        /// Head is movable iff none of this strip's Sockets have a
+        /// downstream Plug connected. The strip's own Plug being connected
+        /// upstream does NOT block Head movement — the Plug stays fixed at
+        /// its Socket, the Head (and Cable route) moves independently.
+        /// </summary>
+        private bool HasNoDownstreamConnections()
         {
-            var ownPlug = ownCableController != null
-                && ownCableController.CableInfo != null
-                ? ownCableController.CableInfo.Plug
-                : powerStrip != null && powerStrip.Cable != null
-                    ? powerStrip.Cable.Plug
-                    : null;
-            if (ownPlug == null || ownPlug.IsConnected || powerStrip == null)
+            if (powerStrip == null)
             {
                 return false;
             }
 
-            var sockets = powerStrip.Sockets;
-            for (var i = 0; i < sockets.Count; i++)
+            foreach (var socket in powerStrip.ActiveSockets)
             {
-                if (sockets[i] != null && sockets[i].IsConnected)
+                if (socket.IsConnected)
                 {
                     return false;
                 }

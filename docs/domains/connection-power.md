@@ -117,6 +117,25 @@ Not implemented yet. When Cable (Base and/or Flow) visually overlaps a Product/P
 - **Finalized allowance balance (2026-09-19):** House current/initial allowance is `8` with independent maximum `22`. PowerStrip current/initial allowances are independent per prefab (`One=3`, `Two=3`, `Three=4`, `Four=5`, `Five=5`), with independent maximum `10` per strip. Socket count never derives Allowed Power and Allowed Power never derives socket count. Reward/upgrade mutation is not established yet; these maxima are serialized read-only balance data until that future system is scoped.
 - UI capacity follows the same independent contract: House has 22 authored icons; the shared PowerStrip meter currently has 5, enough for every finalized initial allowance but not future values 6–10. Icon count must never clamp or mutate authoritative Allowed Power.
 
+### Persistent PowerStrip socket capacity (established, TASK-20260918-007 follow-up)
+
+- `Assets/03_Prefabs/Multitaps/Multitap.prefab` is the single variable-capacity source prefab. Persistent `Socket01`–`Socket05`/`SocketConnector`s, `Whole01`–`Whole05`, Cable/Plug, PowerInfo, `PowerStripPowerInfoBinding`, and `PowerStrip` identity are authored once. Capacity changes never replace, instantiate, or destroy them at runtime.
+- `PowerStrip.InitialSocketCount` initializes runtime `ActiveSocketCount`; `InitialAllowedPowerWatts` independently initializes runtime `AllowedPowerWatts`. `CableInfo.CableLength` is a third, per-Cable authored authority. Socket capacity, electrical allowance, and cable length must not derive, reset, or mutate one another.
+- Gameplay graph traversal uses `PowerStrip.ActiveSockets`. The complete ordered `Sockets` list remains available for identity, diagnostics, and safe capacity transitions. Pointer discovery, magnetic acquisition, validation, final connection mutation, usage/cycle traversal, and power propagation all reject inactive strip sockets defensively.
+- `TrySetActiveSocketCount` is an atomic, increase-only in-place transaction. It rejects out-of-range or incomplete configuration, rejects every decrease with `SocketCountDecreaseUnsupported`, treats a same-count request as a successful no-op, and preflights the prospective placement reservation before committing. Failure leaves count, visuals, reservation, connections, Allowed Power, Powered state, Flow, PowerInfo, and binding unchanged.
+- Head hit testing and variable-size placement use the explicit prefab-authored child `BoxCollider2D` Size/Offset data through `PowerStripSocketLayout`; Renderer bounds are not an authority. For count N, geometry is the union of active module colliders plus only module N's terminal-End colliders.
+- Count-specific PowerInfo local positions are finalized authored data in the single source prefab: count 1 `(-0.23, 0.5)`, count 2 `(-0.46, 0.5)`, count 3 `(-0.69, 0.5)`, count 4 `(-0.92, 0.5)`, count 5 `(-1.15, 0.5)`. Capacity changes move only the persistent PowerInfo Transform to the matching position; they do not change its scale, sprite, layout, hierarchy, color, identity, or binding.
+- Verified matrix: source `1→5` PASS with Allowed Power `7` preserved; connected `2→3` PASS with identities, connections, Usage, Powered, and Flow preserved; inactive-socket exclusion PASS; blocked expansion atomic rollback/reservation PASS; `3→2` rejected with `SocketCountDecreaseUnsupported` and no mutation.
+- `InfiniteMode` migration is not complete or verified. The current local scene diff contains an incomplete migration attempt (two legacy instances absent, only one new-source generic Multitap present), so the scene is excluded from the checkpoint commit. A correct two-for-two Editor migration and readback—or restoration of only that incomplete migration portion while retaining legitimate House budget data—requires an explicit decision. Wall Outlet single-prefab work has not started in TASK-007.
+
+## Current Verification Status (TASK-20260918-007)
+
+- Build: **PASS**, 0 warnings/0 errors. Unity recompile: `up_to_date`. Matching-Editor `verify-unity`: **PASS**.
+- Unity project tests: zero discovered — **NO_PROJECT_TESTS**, not PASS.
+- `verify-fast.ps1`: **FAIL** (exit 1) only on Unity-generated trailing spaces in `Multitap.prefab`; do not report PASS or manually clean prefab YAML.
+- Real pointer behavior: **HUMAN_VERIFY_REQUIRED**. Direct/reflection runtime checks are not pointer-input PASS.
+
 ## Planned, Not Established
 
-Head-drag-beyond-Cable-Length balance rule, Door procedural generation, product outline feedback, audio, and project test assemblies have not been implemented yet.
+- Cable Length strengthening is named in the Infinite Mode reward roadmap, but no CableLength upgrade state/setter or coupling to socket/power upgrades exists. `CableInfo.CableLength` currently remains an authored prefab-instance value, and Head-drag-beyond-Cable-Length behavior remains a pending Human Decision.
+- Wall Outlet single-prefab consolidation, Door procedural generation, product outline feedback, audio, Reward mechanics, and project test assemblies have not been implemented yet.

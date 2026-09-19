@@ -1,5 +1,13 @@
 # Plan — TASK-20260918-007
 
+## ActiveSocketCount source-completion addendum (2026-09-19; current authority)
+
+- `Assets/03_Prefabs/Multitaps/Multitap.prefab` is the one persistent variable-capacity source; Socket01–05, Whole01–05, Cable/Plug, PowerInfo, and bindings are never replaced during expansion.
+- Capacity is increase-only. Same-count is a successful no-op; every decrease returns `SocketCountDecreaseUnsupported` without state mutation.
+- Finalized authored PowerInfo local positions are count 1 `(-0.23, 0.5)`, count 2 `(-0.46, 0.5)`, count 3 `(-0.69, 0.5)`, count 4 `(-0.92, 0.5)`, count 5 `(-1.15, 0.5)`. They are no longer Human Setup Required.
+- The source-prefab 1→5 matrix is complete and passing. Remaining completion work is scene migration/readback, real connected-state preservation, blocked-expansion rollback/reservation integrity, inactive-topology runtime checks, project-test discovery, and Human pointer verification.
+- Wall Outlet structural work remains forbidden until the requested Multitap Human Verification passes.
+
 ## Finalized balance-data addendum (2026-09-19; supersedes placeholder values only)
 
 - Set the scene House current allowance to `8` and represent its finalized independent maximum as serialized/read-only data `22`.
