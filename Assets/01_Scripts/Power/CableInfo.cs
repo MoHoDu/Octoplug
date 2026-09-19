@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Octoplug.Power
@@ -30,9 +31,34 @@ namespace Octoplug.Power
         [Tooltip("Existing 'Line' child's LineRenderer, reused as-is for the routed path drawn in a later stage.")]
         private LineRenderer line;
 
+        public event Action<CableInfo, float, float> CableLengthChanged;
+
         public float CableLength => cableLength;
         public Transform Origin => origin;
         public PlugConnector Plug => plug;
         public LineRenderer Line => line;
+
+        public bool TryUpgradeCableLength(
+            out CableLengthUpgradeFailure failure)
+        {
+            failure = CableLengthUpgradeFailure.None;
+            if (!float.IsFinite(cableLength) || cableLength < 0f)
+            {
+                failure = CableLengthUpgradeFailure.InvalidState;
+                return false;
+            }
+
+            var upgradedLength = cableLength + 1f;
+            if (!float.IsFinite(upgradedLength))
+            {
+                failure = CableLengthUpgradeFailure.InvalidState;
+                return false;
+            }
+
+            var oldLength = cableLength;
+            cableLength = upgradedLength;
+            CableLengthChanged?.Invoke(this, oldLength, upgradedLength);
+            return true;
+        }
     }
 }

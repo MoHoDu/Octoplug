@@ -12,7 +12,7 @@ namespace Octoplug.Power.Input
     public class HeadDragInput : MonoBehaviour
     {
         [SerializeField]
-        private PowerStripSocketLayout socketLayout;
+        private SocketModuleLayout socketLayout;
 
         public event System.Action<Vector2> DragStarted;
         public event System.Action<Vector2> Dragged;

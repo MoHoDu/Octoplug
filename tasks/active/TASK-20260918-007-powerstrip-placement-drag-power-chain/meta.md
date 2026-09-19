@@ -9,9 +9,9 @@
 - **Base:** dev
 - **Branch:** task/TASK-20260918-007-ui-integration (isolated task worktree)
 - **Started:** 2026-09-18
-- **Updated:** 2026-09-19 (single-prefab ActiveSocketCount source and runtime integration matrices verified)
-- **Current Stage:** The approved single-`Multitap.prefab` source now has persistent Socket01–05 identities, finalized count-specific PowerInfo positions, an automated 1→5 source-prefab matrix, and a passing connected-state/rollback/inactive-topology runtime integration matrix. InfiniteMode legacy-instance migration and real pointer verification remain pending. Unity project-test discovery found zero tests (`NO_PROJECT_TESTS`). Existing drag, connection, cable, power-chain, and UI behavior is regression-protected. Socket count remains independent from Allowed Power. Reward selection/UI/probability/generation remains out of scope. Final status remains HUMAN_VERIFY_REQUIRED.
-- **Current Skill:** implement-code / integrate-unity-editor
+- **Updated:** 2026-09-20 (unified variable-count Wall Outlet continuation authorized)
+- **Current Stage:** The runtime-only Multitap upgrades and reusable Unity verification foundation are implemented. This constrained continuation adds the Wall Outlet counterpart: one persistent `Wall_Outlet.prefab` with authored Socket01–05/Whole01–05 identities, independent active Socket count, owner-aware inactive-Socket gates, official Wall Outlet tests, combined task verification, and a one-for-one `InfiniteMode.unity` legacy-instance migration only after automated checks pass. Reward System, production Room Generation integration, gameplay upgrade UI, count decrease, legacy Wall Outlet asset changes, commit, push, DONE, and completion before Human Verification PASS remain excluded. Final status remains `HUMAN_VERIFY_REQUIRED`.
+- **Current Skill:** implement-code / integrate-unity-editor / qa-feature
 
 ## Context
 
@@ -67,7 +67,8 @@ Checked live scene state (Play mode + `eval`) before writing any code:
 ## AI Setup Allowed
 
 - Existing Scene UI instances may receive data/event bindings only: add one non-visual coordinator component to the existing `ConnectionDirector` and serialize references to the already-placed `HousePowerInfo` and `UI_AlertText` objects. No UI objects may be created, reparented, resized, restyled, or repositioned.
-- No new scene-level PowerStrip/Wall Outlet/UI instance placement.
+- The 2026-09-20 runtime-control pass may add a removable custom Inspector under `Assets/Editor` that is disabled outside Play Mode and invokes only public production +1 APIs. It may not use `SerializedObject`, reflection/private-field writes, direct visual toggles, prefab replacement, `EditorUtility.SetDirty`, Undo as state storage, or scene/prefab saving.
+- No new scene-level PowerStrip/Wall Outlet/UI instance placement. No production gameplay upgrade UI.
 
 ## Exclusive Assets
 
@@ -96,6 +97,11 @@ Checked live scene state (Play mode + `eval`) before writing any code:
 - Product prefabs `Assets/03_Prefabs/Products/{TV,Fan,Heater,Induction,Air_Conditioner}.prefab` (nonvisual placement-footprint wiring only).
 - Wall Outlet prefabs `Assets/03_Prefabs/Wall_Outlets/Wall_Outlet_{One,Two,Three,Four,Five}.prefab` (nonvisual Socket hit/terminal-approach metadata only).
 - `Assets/02_Resources/Font/Pretendard-Medium SDF.asset` and existing `Pretendard-Medium 1.otf` (repair the existing dynamic source reference and glyph coverage only; no new font asset).
+- Runtime upgrade control pass: `Assets/01_Scripts/Power/{PowerStrip.cs,CableInfo.cs,PowerStripSocketCountFailure.cs}`; new typed upgrade failure enums and `.meta`; `Assets/01_Scripts/Power/Cable/CableRoutingController.cs`; `Assets/01_Scripts/Power/UI/{ProductTooltipController.cs,PowerStripPowerInfoBinding.cs}`; new `Assets/Editor/Power/PowerStripEditor.cs` and `.meta`; focused Editor/Unity tests and `.meta` if added.
+- Verification foundation: `Assets/Tests/Editor/**` and `.meta`; `scripts/{verify-task.ps1,verify-unity.ps1}`; `harness/mcp/README.md`; current TASK-007 `meta.md`, `plan.md`, `todo.md`, and `handoff.md`.
+- Unified sources for verification/reference repair only: `Assets/03_Prefabs/Multitaps/{Multitap.prefab,PowerInfo.prefab}`. Preserve hierarchy, sprites, transforms, layout, scale, sorting, and authored colors. The five legacy Multitap prefab sources remain untouched.
+- Unified Wall Outlet continuation: `Assets/01_Scripts/Power/{WallOutlet.cs,SocketConnector.cs,PowerStripSocketLayout.cs}` plus the narrow shared-layout replacement/new files and `.meta`; `Assets/01_Scripts/Power/Grid/PlacementFootprint.cs`; `Assets/01_Scripts/Power/Connection/PowerValidationService.cs`; new `WallOutletSocketCountFailure.cs` and `.meta`; focused `Assets/Tests/Editor/**`; `scripts/verify-task.ps1`; `harness/mcp/README.md`; `docs/domains/connection-power.md`; `Assets/03_Prefabs/Wall_Outlets/Wall_Outlet.prefab`; and `Assets/00_Scenes/Demo/InfiniteMode.unity` for the authorized one-for-one scene migration after automated PASS.
+- Read-only migration inputs, never modify/delete: `Assets/03_Prefabs/Wall_Outlets/Wall_Outlet_{One,Two,Three,Four,Five}.prefab`.
 
 ## Human Decisions
 

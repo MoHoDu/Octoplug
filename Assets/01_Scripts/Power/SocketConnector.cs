@@ -39,8 +39,14 @@ namespace Octoplug.Power
         {
             get
             {
-                var owner = GetComponentInParent<PowerStrip>();
-                return owner == null || owner.IsSocketActive(this);
+                var powerStrip = GetComponentInParent<PowerStrip>();
+                if (powerStrip != null)
+                {
+                    return powerStrip.IsSocketActive(this);
+                }
+
+                var wallOutlet = GetComponentInParent<WallOutlet>();
+                return wallOutlet == null || wallOutlet.IsSocketActive(this);
             }
         }
 

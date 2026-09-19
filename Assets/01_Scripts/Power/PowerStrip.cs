@@ -53,7 +53,14 @@ namespace Octoplug.Power
         public float AllowedPowerWatts => allowedPowerWatts;
         public float MaxAllowedPowerWatts => maxAllowedPowerWatts;
         public int InitialSocketCount => initialSocketCount;
-        public int ActiveSocketCount => activeSocketCount;
+        public int ActiveSocketCount
+        {
+            get
+            {
+                EnsureInitialized();
+                return activeSocketCount;
+            }
+        }
         public CableInfo Cable => cable;
         public IReadOnlyList<SocketConnector> Sockets => sockets;
 
@@ -61,6 +68,7 @@ namespace Octoplug.Power
         {
             get
             {
+                EnsureInitialized();
                 var count = Mathf.Min(activeSocketCount, sockets.Count);
                 for (var i = 0; i < count; i++)
                 {
@@ -80,6 +88,7 @@ namespace Octoplug.Power
 
         public bool IsSocketActive(SocketConnector socket)
         {
+            EnsureInitialized();
             if (socket == null)
             {
                 return false;
@@ -99,10 +108,59 @@ namespace Octoplug.Power
 
         public bool IsSocketIndexActive(int index)
         {
+            EnsureInitialized();
             return index >= 0 && index < activeSocketCount && index < sockets.Count;
         }
 
-        public bool TrySetActiveSocketCount(
+        public bool TryUpgradeActiveSocketCount(
+            out PowerStripSocketCountFailure failure)
+        {
+            EnsureInitialized();
+            return TrySetActiveSocketCount(
+                activeSocketCount + 1,
+                out failure);
+        }
+
+        public bool TryUpgradeAllowedPowerWatts(
+            out PowerStripUpgradeFailure failure)
+        {
+            EnsureInitialized();
+            failure = PowerStripUpgradeFailure.None;
+
+            if (!float.IsFinite(allowedPowerWatts)
+                || !float.IsFinite(maxAllowedPowerWatts))
+            {
+                failure = PowerStripUpgradeFailure.InvalidState;
+                return false;
+            }
+
+            if (allowedPowerWatts < 0f || maxAllowedPowerWatts < 0f)
+            {
+                failure = PowerStripUpgradeFailure.InvalidState;
+                return false;
+            }
+
+            var maximum = Mathf.Min(maxAllowedPowerWatts, 10f);
+            if (allowedPowerWatts >= maximum)
+            {
+                failure = PowerStripUpgradeFailure.MaximumReached;
+                return false;
+            }
+
+            var upgradedValue = allowedPowerWatts + 1f;
+            if (!float.IsFinite(upgradedValue)
+                || upgradedValue > maximum)
+            {
+                failure = PowerStripUpgradeFailure.MaximumReached;
+                return false;
+            }
+
+            allowedPowerWatts = upgradedValue;
+            AllowanceChanged?.Invoke(this);
+            return true;
+        }
+
+        private bool TrySetActiveSocketCount(
             int requestedCount,
             out PowerStripSocketCountFailure failure)
         {
@@ -133,6 +191,16 @@ namespace Octoplug.Power
                 return false;
             }
 
+            for (var i = 0; i < sockets.Count; i++)
+            {
+                if (sockets[i] == null
+                    || socketLayout.ModuleLayout.GetSocket(i) != sockets[i])
+                {
+                    failure = PowerStripSocketCountFailure.MissingAuthoredConfiguration;
+                    return false;
+                }
+            }
+
             var service = CableRoutingGridService.Instance;
             var grid = service != null ? service.Grid : null;
             if (grid == null)
@@ -153,18 +221,6 @@ namespace Octoplug.Power
             ActiveSocketCountChanged?.Invoke(this, oldCount, requestedCount);
             PlugSocketConnection.NotifyTopologyChanged();
             return true;
-        }
-
-        public void SetAllowedPowerWatts(float value)
-        {
-            EnsureInitialized();
-            if (Mathf.Approximately(allowedPowerWatts, value))
-            {
-                return;
-            }
-
-            allowedPowerWatts = value;
-            AllowanceChanged?.Invoke(this);
         }
 
         public void SetPowered(bool powered)

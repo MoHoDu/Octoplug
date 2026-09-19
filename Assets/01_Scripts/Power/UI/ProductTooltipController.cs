@@ -35,6 +35,8 @@ namespace Octoplug.Power.UI
         private TextMeshProUGUI powerLabel;
 
         private Image[] powerIcons;
+        private ApplianceSource displayedProduct;
+        private CableInfo displayedCable;
 
         [SerializeField]
         private TextMeshProUGUI cableLabel;
@@ -78,6 +80,7 @@ namespace Octoplug.Power.UI
         private void OnDisable()
         {
             Octoplug.Power.Input.PlugDragInput.AnyDragStarted -= Hide;
+            SetDisplayedProduct(null);
         }
 
         private void Update()
@@ -116,6 +119,7 @@ namespace Octoplug.Power.UI
                 return;
             }
 
+            SetDisplayedProduct(product);
             BindContent(product);
             PositionPanel(product);
             panel.gameObject.SetActive(true);
@@ -123,9 +127,42 @@ namespace Octoplug.Power.UI
 
         public void Hide()
         {
+            SetDisplayedProduct(null);
             if (panel != null)
             {
                 panel.gameObject.SetActive(false);
+            }
+        }
+
+        private void SetDisplayedProduct(ApplianceSource product)
+        {
+            if (displayedCable != null)
+            {
+                displayedCable.CableLengthChanged -= OnCableLengthChanged;
+            }
+
+            displayedProduct = product;
+            displayedCable = displayedProduct != null
+                ? displayedProduct.Cable
+                : null;
+
+            if (displayedCable != null)
+            {
+                displayedCable.CableLengthChanged += OnCableLengthChanged;
+            }
+        }
+
+        private void OnCableLengthChanged(
+            CableInfo changedCable,
+            float oldLength,
+            float newLength)
+        {
+            if (changedCable == displayedCable
+                && panel != null
+                && panel.gameObject.activeSelf
+                && cableLabel != null)
+            {
+                cableLabel.text = $"{newLength:0.#}m";
             }
         }
 

@@ -17,13 +17,9 @@ namespace Octoplug.Power.UI
     /// Self-contained per Prefab (like <see cref="Octoplug.Power.Grid.PlacementFootprint"/>
     /// or <see cref="Octoplug.Power.Cable.PowerStripHeadController"/>) —
     /// works for any number of placed PowerStrip instances with no central
-    /// scene-level wiring. Currently every Multitap's PowerInfo has 5
-    /// authored icons against a 10W allowance, which cannot be faithfully
-    /// represented; this is reported once per refresh as a Human Setup
-    /// error (never clamped/cloned/partially shown) via
-    /// <see cref="PowerMeterPresenter.TryApply"/>'s own failure path. Once
-    /// a person resizes the icon pool to match, this exact binding starts
-    /// rendering correctly with no code change.
+    /// scene-level wiring. The unified PowerInfo source authors one icon per
+    /// supported watt; a structural icon-pool shortage is reported instead of
+    /// clamping, cloning, or partially showing the authoritative allowance.
     /// </summary>
     public class PowerStripPowerInfoBinding : MonoBehaviour
     {
@@ -60,6 +56,7 @@ namespace Octoplug.Power.UI
         {
             PlugSocketConnection.GraphChanged += OnGraphChanged;
             PowerStrip.AllowanceChanged += OnStripAllowanceChanged;
+            PowerStrip.ActiveSocketCountChanged += OnActiveSocketCountChanged;
             CacheColorsOnce();
             QueueRefresh();
         }
@@ -68,6 +65,7 @@ namespace Octoplug.Power.UI
         {
             PlugSocketConnection.GraphChanged -= OnGraphChanged;
             PowerStrip.AllowanceChanged -= OnStripAllowanceChanged;
+            PowerStrip.ActiveSocketCountChanged -= OnActiveSocketCountChanged;
             refreshQueued = false;
         }
 
@@ -95,6 +93,17 @@ namespace Octoplug.Power.UI
         }
 
         private void OnStripAllowanceChanged(PowerStrip changedStrip)
+        {
+            if (changedStrip == strip)
+            {
+                QueueRefresh();
+            }
+        }
+
+        private void OnActiveSocketCountChanged(
+            PowerStrip changedStrip,
+            int oldCount,
+            int newCount)
         {
             if (changedStrip == strip)
             {

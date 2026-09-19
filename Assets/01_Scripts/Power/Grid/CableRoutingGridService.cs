@@ -30,6 +30,15 @@ namespace Octoplug.Power.Grid
         private bool hasBuiltOnce;
 
         /// <summary>
+        /// Initializes the runtime grid explicitly for EditMode verification,
+        /// where Unity does not invoke MonoBehaviour Awake automatically.
+        /// </summary>
+        public void InitializeForVerification()
+        {
+            Initialize();
+        }
+
+        /// <summary>
         /// Convenience scene-wide access so Cable routing does not need to
         /// search the scene for this service. Set on the first instance to
         /// wake up; there is expected to be exactly one per loaded scene.
@@ -53,8 +62,14 @@ namespace Octoplug.Power.Grid
 
         private void Awake()
         {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
             Instance = this;
             grid = new CableRoutingGrid(cellSize);
+            hasBuiltOnce = false;
         }
 
         private void OnDestroy()

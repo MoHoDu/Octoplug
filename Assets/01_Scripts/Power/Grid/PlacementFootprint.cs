@@ -23,7 +23,7 @@ namespace Octoplug.Power.Grid
 
         [SerializeField]
         [Tooltip("Optional authored variable-size geometry for a PowerStrip.")]
-        private PowerStripSocketLayout powerStripLayout;
+        private SocketModuleLayout powerStripLayout;
 
         private readonly List<GridCoord> reservedCells = new();
         private readonly List<GridCoord> candidateCells = new();

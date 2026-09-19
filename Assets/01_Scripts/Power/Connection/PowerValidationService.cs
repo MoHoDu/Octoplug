@@ -159,13 +159,13 @@ namespace Octoplug.Power.Connection
 
         public static bool IsSocketSourceLive(SocketConnector socket)
         {
-            if (socket == null)
+            if (socket == null || !socket.IsActiveSocket)
             {
                 return false;
             }
 
             var strip = socket.GetComponentInParent<PowerStrip>();
-            return strip == null || strip.IsSocketActive(socket) && strip.IsPowered;
+            return strip == null || strip.IsPowered;
         }
 
         private static void CollectHouseProducts(

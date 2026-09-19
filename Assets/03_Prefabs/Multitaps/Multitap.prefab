@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 9177814760449093970}
   - component: {fileID: 572241933546682071}
   - component: {fileID: 2510513521909667574}
+  - component: {fileID: 8684387530648432682}
   m_Layer: 0
   m_Name: Multitap
   m_TagString: Untagged
@@ -95,7 +96,7 @@ MonoBehaviour:
   boundsCollider: {fileID: 572241933546682071}
   boundsRenderer: {fileID: 1868305155438619644}
   fallbackSize: {x: 1, y: 1}
-  powerStripLayout: {fileID: 2510513521909667574}
+  powerStripLayout: {fileID: 8684387530648432682}
 --- !u!61 &572241933546682071
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -154,54 +155,70 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c964b5c05743c6e42a3a3b8b14f10dd8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.PowerStripSocketLayout
+  moduleLayout: {fileID: 8684387530648432682}
   powerInfo: {fileID: 4760349292047453328}
+  powerInfoPositions:
+  - authored: 1
+    localPosition: {x: -0.23, y: 0.5, z: 0}
+  - authored: 1
+    localPosition: {x: -0.46, y: 0.5, z: 0}
+  - authored: 1
+    localPosition: {x: -0.69, y: 0.5, z: 0}
+  - authored: 1
+    localPosition: {x: -0.92, y: 0.5, z: 0}
+  - authored: 1
+    localPosition: {x: -1.15, y: 0.5, z: 0}
+--- !u!114 &8684387530648432682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8514593742884922755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2ef53c4db8a40ba9d3bd6ca35690bd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketModuleLayout
+  first: {fileID: 1654407944721882033}
+  firstColliders:
+  - {fileID: 3804293442844056069}
   modules:
   - socket: {fileID: 3489803800200848687}
     whole: {fileID: 8096954285846037160}
     end: {fileID: 4179673071676763890}
-    moduleColliders:
+    bodyColliders:
     - {fileID: 4488691219203899753}
-    - {fileID: 3804293442844056069}
     terminalColliders:
     - {fileID: 6507122619242017900}
-    hasAuthoredPowerInfoPosition: 1
-    powerInfoLocalPosition: {x: -0.23, y: 0.5, z: 0}
   - socket: {fileID: 165321875176609093}
     whole: {fileID: 3102333609504487837}
     end: {fileID: 6965403123944294358}
-    moduleColliders:
+    bodyColliders:
     - {fileID: 2274305636067264113}
     terminalColliders:
     - {fileID: 6812546034951909647}
-    hasAuthoredPowerInfoPosition: 1
-    powerInfoLocalPosition: {x: -0.46, y: 0.5, z: 0}
   - socket: {fileID: 5663078490599016056}
     whole: {fileID: 3763204667895191123}
     end: {fileID: 5676749001287326753}
-    moduleColliders:
+    bodyColliders:
     - {fileID: 4648636758320298144}
     terminalColliders:
     - {fileID: 3643903952428543112}
-    hasAuthoredPowerInfoPosition: 1
-    powerInfoLocalPosition: {x: -0.69, y: 0.5, z: 0}
   - socket: {fileID: 6421323321567332982}
     whole: {fileID: 5620656412644056660}
     end: {fileID: 6604483001340235852}
-    moduleColliders:
+    bodyColliders:
     - {fileID: 8877332770636321322}
     terminalColliders:
     - {fileID: 4948789599448721273}
-    hasAuthoredPowerInfoPosition: 1
-    powerInfoLocalPosition: {x: -0.92, y: 0.5, z: 0}
   - socket: {fileID: 9179267337055420845}
     whole: {fileID: 8774756261539506055}
     end: {fileID: 8639690031653502111}
-    moduleColliders:
+    bodyColliders:
     - {fileID: 8705485663076925627}
     terminalColliders:
     - {fileID: 7699185493337195887}
-    hasAuthoredPowerInfoPosition: 1
-    powerInfoLocalPosition: {x: -1.15, y: 0.5, z: 0}
 --- !u!1001 &1313929469699306188
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -647,7 +664,7 @@ PrefabInstance:
     - target: {fileID: 3243207514679331773, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
       propertyPath: socketLayout
       value: 
-      objectReference: {fileID: 2510513521909667574}
+      objectReference: {fileID: 8684387530648432682}
     - target: {fileID: 3898129335195237798, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -717,6 +734,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+--- !u!1 &1654407944721882033 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6272129959286577800, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}
+  m_PrefabInstance: {fileID: 4755440245152399673}
+  m_PrefabAsset: {fileID: 0}
 --- !u!212 &1868305155438619644 stripped
 SpriteRenderer:
   m_CorrespondingSourceObject: {fileID: 6346480169331780293, guid: 174d2abd60c6acd4fb93386e11c09bf9, type: 3}

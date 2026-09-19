@@ -131,6 +131,7 @@ namespace Octoplug.Power.Cable
         private GridCoord cachedLooseTargetCell;
         private List<GridCoord> cachedLooseCellPath;
         private bool hasCachedLooseRoute;
+        private bool isPlugDragging;
 
         private SpriteRenderer[] plugSpriteRenderers;
 
@@ -152,6 +153,54 @@ namespace Octoplug.Power.Cable
         public event Action<ConnectionFailureReason> ConnectionRejected;
 
         public ConnectionFailureReason LastFailureReason { get; private set; }
+
+        /// <summary>
+        /// Resolves the magnetic Socket candidate and route for the current
+        /// Cable without moving the Plug or mutating the connection graph.
+        /// This is the same side, activity, occupancy, route, length, graph,
+        /// and power query used by drag preview and release.
+        /// </summary>
+        public bool TryResolveSocketCandidate(
+            Vector2 pointerWorldPosition,
+            out Octoplug.Power.SocketConnector socket,
+            out IReadOnlyList<Vector2> worldPath)
+        {
+            socket = null;
+            worldPath = null;
+            if (cableInfo == null
+                || cableInfo.Origin == null
+                || cableInfo.Plug == null)
+            {
+                return false;
+            }
+
+            ResolveConnectionOwners();
+            var grid = ResolveGrid();
+            if (grid == null)
+            {
+                return false;
+            }
+
+            var originPosition =
+                (Vector2)cableInfo.Origin.position;
+            var originCell = grid.WorldToCell(originPosition);
+            if (!grid.IsWalkable(originCell)
+                || !TryFindNearestSocket(
+                    originPosition,
+                    originCell,
+                    pointerWorldPosition,
+                    grid,
+                    out socket,
+                    out var resolvedPath,
+                    out _,
+                    out _))
+            {
+                return false;
+            }
+
+            worldPath = resolvedPath;
+            return true;
+        }
 
         /// <summary>
         /// Highest authored <see cref="SpriteRenderer.sortingOrder"/> found
@@ -189,13 +238,7 @@ namespace Octoplug.Power.Cable
 
             lastValidPlugPosition = cableInfo.Plug.transform.position;
             powerFlowEffect = GetComponent<CablePowerFlowEffect>();
-            applianceSource = GetComponentInParent<Octoplug.Power.ApplianceSource>();
-            powerStrip = GetComponentInParent<Octoplug.Power.PowerStrip>();
-#if UNITY_2023_1_OR_NEWER
-            houseBudget = UnityEngine.Object.FindFirstObjectByType<Octoplug.Power.HousePowerBudget>();
-#else
-            houseBudget = UnityEngine.Object.FindObjectOfType<Octoplug.Power.HousePowerBudget>();
-#endif
+            ResolveConnectionOwners();
 
             plugSpriteRenderers = cableInfo.Plug.GetComponentsInChildren<SpriteRenderer>(true);
             plugRestingSortingOrders = new int[plugSpriteRenderers.Length];
@@ -216,6 +259,8 @@ namespace Octoplug.Power.Cable
                 dragInput.Dragged += OnDragged;
                 dragInput.DragEnded += OnDragEnded;
             }
+
+            cableInfo.CableLengthChanged += OnCableLengthChanged;
         }
 
         /// <summary>
@@ -459,6 +504,29 @@ namespace Octoplug.Power.Cable
                 dragInput.Dragged -= OnDragged;
                 dragInput.DragEnded -= OnDragEnded;
             }
+
+            if (cableInfo != null)
+            {
+                cableInfo.CableLengthChanged -= OnCableLengthChanged;
+            }
+        }
+
+        private void OnCableLengthChanged(
+            Octoplug.Power.CableInfo changedCable,
+            float oldLength,
+            float newLength)
+        {
+            if (changedCable != cableInfo)
+            {
+                return;
+            }
+
+            cachedLooseCellPath = null;
+            hasCachedLooseRoute = false;
+            if (isPlugDragging)
+            {
+                OnDragged(lastPointerWorldPos);
+            }
         }
 
         /// <summary>
@@ -474,6 +542,7 @@ namespace Octoplug.Power.Cable
         /// </summary>
         private void OnDragStarted()
         {
+            isPlugDragging = true;
             originalSocket = cableInfo.Plug.ConnectedSocket;
             recentlyDetachedSocket = null;
             originalSocketPath = null;
@@ -750,6 +819,7 @@ namespace Octoplug.Power.Cable
         /// </summary>
         private void OnDragEnded()
         {
+            isPlugDragging = false;
             ResolveDragEnd();
             ApplyFinalSorting();
         }
@@ -1396,6 +1466,26 @@ namespace Octoplug.Power.Cable
             {
                 path.Add(to);
             }
+        }
+
+        private void ResolveConnectionOwners()
+        {
+            applianceSource ??=
+                GetComponentInParent<Octoplug.Power.ApplianceSource>();
+            powerStrip ??=
+                GetComponentInParent<Octoplug.Power.PowerStrip>();
+            if (houseBudget != null)
+            {
+                return;
+            }
+
+#if UNITY_2023_1_OR_NEWER
+            houseBudget = UnityEngine.Object.FindFirstObjectByType<
+                Octoplug.Power.HousePowerBudget>();
+#else
+            houseBudget = UnityEngine.Object.FindObjectOfType<
+                Octoplug.Power.HousePowerBudget>();
+#endif
         }
 
         private CableRoutingGrid ResolveGrid()
