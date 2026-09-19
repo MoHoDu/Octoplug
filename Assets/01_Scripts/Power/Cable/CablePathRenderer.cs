@@ -10,8 +10,13 @@ namespace Octoplug.Power.Cable
     /// the path is computed once here and never duplicated or recomputed.
     ///
     /// Only touches point positions and (once) each renderer's
-    /// corner-vertex smoothing count — never material, width, or other
-    /// authored LineRenderer design values.
+    /// corner-vertex smoothing count — never coordinate-space mode,
+    /// material, width, sorting, or other authored LineRenderer design
+    /// values. Corner-vertex smoothing (numCornerVertices) was silently
+    /// dropped from this class during TASK-007's Stabilization pass — with
+    /// it gone, every 8-direction bend became a hard, uncapped miter (the
+    /// primary source of the "spike"/"width pop" defects), so it is
+    /// restored here rather than being a new behavior.
     ///
     /// Collinear points are merged so a straight run stays one segment
     /// instead of one LineRenderer point per grid cell. This never touches
@@ -32,7 +37,7 @@ namespace Octoplug.Power.Cable
         private LineRenderer flowLine;
 
         [SerializeField]
-        [Tooltip("Rounds the 90-degree corners' line geometry only (LineRenderer.numCornerVertices). Does not change the underlying route.")]
+        [Tooltip("Rounds the 90-degree corners' line geometry only (LineRenderer.numCornerVertices). Does not change the underlying route. Restores TASK-006's join-rounding after it was accidentally dropped during Stabilization.")]
         [Range(0, 8)]
         private int cornerVertices = 4;
 
@@ -48,12 +53,31 @@ namespace Octoplug.Power.Cable
             }
 
             var simplified = Simplify(worldWaypoints);
+            if (simplified.Count < 2)
+            {
+                Clear();
+                return;
+            }
 
             ApplyTo(line, simplified, ref baseCornerVerticesApplied);
             ApplyTo(flowLine, simplified, ref flowCornerVerticesApplied);
         }
 
-        private void ApplyTo(LineRenderer target, List<Vector2> simplifiedPoints, ref bool cornerVerticesApplied)
+        /// <summary>
+        /// Removes every rendered point from Base and Flow together. Used
+        /// before startup routing so authored fallback points can never render
+        /// when the live Grid rejects the initial route.
+        /// </summary>
+        public void Clear()
+        {
+            Clear(line);
+            Clear(flowLine);
+        }
+
+        private void ApplyTo(
+            LineRenderer target,
+            List<Vector2> simplifiedPoints,
+            ref bool cornerVerticesApplied)
         {
             if (target == null)
             {
@@ -66,46 +90,62 @@ namespace Octoplug.Power.Cable
                 cornerVerticesApplied = true;
             }
 
-            var targetTransform = target.transform;
             target.positionCount = simplifiedPoints.Count;
             for (var i = 0; i < simplifiedPoints.Count; i++)
             {
-                target.SetPosition(i, targetTransform.InverseTransformPoint(simplifiedPoints[i]));
+                var worldPoint = simplifiedPoints[i];
+                var point = new Vector3(worldPoint.x, worldPoint.y, 0f);
+                target.SetPosition(
+                    i,
+                    target.useWorldSpace
+                        ? point
+                        : target.transform.InverseTransformPoint(point));
+            }
+        }
+
+        private static void Clear(LineRenderer target)
+        {
+            if (target != null)
+            {
+                target.positionCount = 0;
             }
         }
 
         /// <summary>Removes interior points that do not change direction from the polyline (including near-duplicate points, whose in/out segment is ~zero length).</summary>
-        private static List<Vector2> Simplify(IReadOnlyList<Vector2> points)
+        private static List<Vector2> Simplify(
+            IReadOnlyList<Vector2> points)
         {
-            if (points.Count <= 2)
+            var distinct = new List<Vector2>(points.Count);
+            foreach (var point in points)
             {
-                return new List<Vector2>(points);
+                if (distinct.Count == 0
+                    || (point - distinct[^1]).sqrMagnitude >= 1e-8f)
+                {
+                    distinct.Add(point);
+                }
             }
 
-            var result = new List<Vector2> { points[0] };
-
-            for (var i = 1; i < points.Count - 1; i++)
+            if (distinct.Count <= 2)
             {
-                var previous = points[i - 1];
-                var current = points[i];
-                var next = points[i + 1];
+                return distinct;
+            }
 
-                var incoming = current - previous;
-                var outgoing = next - current;
+            var result = new List<Vector2> { distinct[0] };
+            for (var i = 1; i < distinct.Count - 1; i++)
+            {
+                var incoming = distinct[i] - result[^1];
+                var outgoing = distinct[i + 1] - distinct[i];
+                var sameDirection = Vector2.Dot(
+                    incoming.normalized,
+                    outgoing.normalized) > 0.999f;
 
-                if (incoming.sqrMagnitude < 1e-8f || outgoing.sqrMagnitude < 1e-8f)
-                {
-                    continue;
-                }
-
-                var sameDirection = Vector2.Dot(incoming.normalized, outgoing.normalized) > 0.999f;
                 if (!sameDirection)
                 {
-                    result.Add(current);
+                    result.Add(distinct[i]);
                 }
             }
 
-            result.Add(points[^1]);
+            result.Add(distinct[^1]);
             return result;
         }
     }

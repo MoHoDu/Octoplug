@@ -40,3 +40,18 @@ claude mcp list
 ```
 
 Then use read-only Unity status and scene-list calls for the explicit project. If the Editor is not visible, record the limitation and leave Unity content untouched.
+
+## Task Verification
+
+Run the reusable task verifier from the exact task worktree:
+
+```powershell
+pwsh -File scripts/verify-task.ps1 `
+  -ProjectPath D:\github-worktrees\Octoplug\TASK-20260918-007-ui-integration
+```
+
+A matching ready Editor must already be open with Play Mode stopped and every open scene clean. The command builds the generated `.slnx`, recompiles through Unity Pipeline, discovers and runs the official PowerStrip and Wall Outlet runtime-upgrade EditMode suites under `Assets/Tests/Editor`, tracks only the new Console entries without clearing history, and finishes with `verify-fast.ps1`.
+
+The default `RuntimeUpgradeTests` filter runs both suites and reports their counts separately: PowerStrip 4 and WallOutlet 7 (11 total at the current TASK-007 checkpoint). Use `-TestFilter <fixture-or-test-name>` only for a targeted rerun. Every official test reuses `UnityVerificationFixture`, authored prefabs, public production upgrade APIs, and `PlugSocketConnection`; it must not fabricate private serialized state or toggle authored children directly.
+
+The summary must report Console continuity explicitly. A reset, dropped entries, or session mismatch is `Console Delta: UNRELIABLE` and fails Overall; a successful run requires a reliable same-session delta and zero new Console errors.

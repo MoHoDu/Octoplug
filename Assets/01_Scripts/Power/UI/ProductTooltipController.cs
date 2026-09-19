@@ -12,11 +12,10 @@ namespace Octoplug.Power.UI
     /// to the clicked Product's on-screen sprite bounds. Owns all
     /// Product-click mouse polling itself (mirroring
     /// <see cref="Octoplug.Power.Input.PlugDragInput"/>'s single-owner
-    /// pattern) so exactly one thing decides "was this click a Product, a
-    /// Plug, or empty space" — Plug hits always win (see
-    /// <see cref="Octoplug.Power.Input.PlugDragInput.IsPointerOverAnyPlug"/>),
-    /// a Product hit shows/replaces the tooltip, and anything else closes
-    /// it. Also closes the instant any Plug starts a drag anywhere (see
+    /// pattern) while the shared pointer resolver decides whether the click
+    /// belongs to UI, a Plug, Product, Socket, eligible Head, or empty space.
+    /// A captured Product shows/replaces the tooltip and an empty-space click
+    /// closes it. Also closes the instant any Plug starts a drag anywhere (see
     /// <see cref="Octoplug.Power.Input.PlugDragInput.AnyDragStarted"/>).
     /// </summary>
     public class ProductTooltipController : MonoBehaviour
@@ -36,6 +35,8 @@ namespace Octoplug.Power.UI
         private TextMeshProUGUI powerLabel;
 
         private Image[] powerIcons;
+        private ApplianceSource displayedProduct;
+        private CableInfo displayedCable;
 
         [SerializeField]
         private TextMeshProUGUI cableLabel;
@@ -79,34 +80,36 @@ namespace Octoplug.Power.UI
         private void OnDisable()
         {
             Octoplug.Power.Input.PlugDragInput.AnyDragStarted -= Hide;
+            SetDisplayedProduct(null);
         }
 
         private void Update()
         {
             var mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.wasReleasedThisFrame)
+            if (mouse == null)
             {
                 return;
             }
 
-            if (!TryGetPointerWorldPosition(out var worldPos))
+            if (mouse.leftButton.wasPressedThisFrame && TryGetPointerWorldPosition(out var downPos))
+            {
+                Octoplug.Power.Input.PointerInteractionResolver.BeginPointerDown(downPos);
+            }
+
+            if (!mouse.leftButton.wasReleasedThisFrame)
             {
                 return;
             }
 
-            if (Octoplug.Power.Input.PlugDragInput.IsPointerOverAnyPlug(worldPos))
+            var product = Octoplug.Power.Input.PointerInteractionResolver.CapturedProduct;
+            if (product != null)
             {
-                return; // A Plug grab, not a Product click — never touch the tooltip.
+                Show(product);
             }
-
-            var product = ProductClickInput.TryGetProductAt(worldPos);
-            if (product == null)
+            else if (Octoplug.Power.Input.PointerInteractionResolver.IsEmptyCapture)
             {
                 Hide();
-                return;
             }
-
-            Show(product);
         }
 
         public void Show(ApplianceSource product)
@@ -116,6 +119,7 @@ namespace Octoplug.Power.UI
                 return;
             }
 
+            SetDisplayedProduct(product);
             BindContent(product);
             PositionPanel(product);
             panel.gameObject.SetActive(true);
@@ -123,9 +127,42 @@ namespace Octoplug.Power.UI
 
         public void Hide()
         {
+            SetDisplayedProduct(null);
             if (panel != null)
             {
                 panel.gameObject.SetActive(false);
+            }
+        }
+
+        private void SetDisplayedProduct(ApplianceSource product)
+        {
+            if (displayedCable != null)
+            {
+                displayedCable.CableLengthChanged -= OnCableLengthChanged;
+            }
+
+            displayedProduct = product;
+            displayedCable = displayedProduct != null
+                ? displayedProduct.Cable
+                : null;
+
+            if (displayedCable != null)
+            {
+                displayedCable.CableLengthChanged += OnCableLengthChanged;
+            }
+        }
+
+        private void OnCableLengthChanged(
+            CableInfo changedCable,
+            float oldLength,
+            float newLength)
+        {
+            if (changedCable == displayedCable
+                && panel != null
+                && panel.gameObject.activeSelf
+                && cableLabel != null)
+            {
+                cableLabel.text = $"{newLength:0.#}m";
             }
         }
 

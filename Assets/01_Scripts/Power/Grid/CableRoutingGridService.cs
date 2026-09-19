@@ -11,6 +11,7 @@ namespace Octoplug.Power.Grid
     /// This is data-population only — no path search is implemented here
     /// yet (see <see cref="CableRoutingGrid"/>).
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class CableRoutingGridService : MonoBehaviour
     {
         [SerializeField]
@@ -27,6 +28,15 @@ namespace Octoplug.Power.Grid
 
         private CableRoutingGrid grid;
         private bool hasBuiltOnce;
+
+        /// <summary>
+        /// Initializes the runtime grid explicitly for EditMode verification,
+        /// where Unity does not invoke MonoBehaviour Awake automatically.
+        /// </summary>
+        public void InitializeForVerification()
+        {
+            Initialize();
+        }
 
         /// <summary>
         /// Convenience scene-wide access so Cable routing does not need to
@@ -52,8 +62,14 @@ namespace Octoplug.Power.Grid
 
         private void Awake()
         {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
             Instance = this;
             grid = new CableRoutingGrid(cellSize);
+            hasBuiltOnce = false;
         }
 
         private void OnDestroy()
@@ -66,7 +82,10 @@ namespace Octoplug.Power.Grid
 
         private void Start()
         {
-            EnsureBuilt();
+            // OnEnable-time placement registration may have requested a
+            // provisional build. Rebuild once after every scene object has
+            // finished enabling so this is the authoritative startup grid.
+            RebuildFromScene();
         }
 
         private void EnsureBuilt()
@@ -80,8 +99,8 @@ namespace Octoplug.Power.Grid
         /// <summary>Rebuilds the grid from every RoomArea currently loaded in the scene.</summary>
         public void RebuildFromScene()
         {
+            Physics2D.SyncTransforms();
             grid.Clear();
-            hasBuiltOnce = true;
 
 #if UNITY_2023_1_OR_NEWER
             var rooms = Object.FindObjectsByType<RoomArea>(FindObjectsSortMode.None);
@@ -92,6 +111,8 @@ namespace Octoplug.Power.Grid
             {
                 RebuildFromRoom(room);
             }
+
+            hasBuiltOnce = true;
         }
 
         /// <summary>Registers one room's floor area, then overlays its wall and door colliders.</summary>

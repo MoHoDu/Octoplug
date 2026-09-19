@@ -9,6 +9,49 @@ $ErrorActionPreference = 'Stop'
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $unity = Get-Command unity -ErrorAction Stop
 
+function Convert-UnityResult {
+    param([Parameter(Mandatory)][string]$Json)
+
+    $outer = $Json | ConvertFrom-Json
+    if (-not $outer.success) {
+        $message = @($outer.errors | ForEach-Object message) -join '; '
+        throw "Unity command failed: $message"
+    }
+
+    $result = $outer.data.result
+    if ($result -is [string]) {
+        $trimmed = $result.Trim()
+        if ($trimmed.StartsWith('{') -or $trimmed.StartsWith('[')) {
+            $result = $trimmed | ConvertFrom-Json
+        }
+    }
+
+    return $result
+}
+
+function Wait-Recompile {
+    param([ValidateRange(30, 1800)][int]$TimeoutSeconds = 300)
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    do {
+        $raw = (& $unity.Source command recompile_status --project-path $resolvedProject --format json 2>&1) -join "`n"
+        if ($LASTEXITCODE -eq 0) {
+            try {
+                $status = Convert-UnityResult -Json $raw
+                if ($status.status -in @('completed', 'up_to_date')) {
+                    return $status
+                }
+            } catch {
+                # Domain reload can briefly interrupt or return an incomplete response.
+            }
+        }
+
+        Start-Sleep -Seconds 2
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    throw "Unity recompilation did not complete within $TimeoutSeconds seconds."
+}
+
 Write-Output "Unity project: $resolvedProject"
 & $unity.Source pipeline list --format json
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect Unity Pipeline instances.' }
@@ -21,8 +64,7 @@ if ($LASTEXITCODE -ne 0) {
 
 $statusJson = (& $unity.Source command editor_status --project-path $resolvedProject --format json) -join "`n"
 if ($LASTEXITCODE -ne 0) { throw 'Unable to read Editor status.' }
-$statusResult = $statusJson | ConvertFrom-Json
-$editor = $statusResult.data.result
+$editor = Convert-UnityResult -Json $statusJson
 if ($editor.projectPath -ne $resolvedProject) { throw "Connected Editor path mismatch: $($editor.projectPath)" }
 if ($editor.status -ne 'ready' -or $editor.compiling -or $editor.domainReloadInProgress) {
     throw 'Editor is not ready for verification.'
@@ -32,21 +74,33 @@ Write-Output $statusJson
 
 $scenesJson = (& $unity.Source command list_open_scenes --project-path $resolvedProject --format json) -join "`n"
 if ($LASTEXITCODE -ne 0) { throw 'Unable to list open scenes.' }
-$scenesResult = $scenesJson | ConvertFrom-Json
-$dirtyScenes = @($scenesResult.data.result.scenes | Where-Object isDirty)
+$scenes = Convert-UnityResult -Json $scenesJson
+$dirtyScenes = @($scenes.scenes | Where-Object isDirty)
 if ($dirtyScenes.Count) { throw "Open scene is dirty: $($dirtyScenes.path -join ', ')" }
 Write-Output $scenesJson
 
 if ($Compile) {
-    & $unity.Source command refresh_and_wait_for_compile --project-path $resolvedProject --format json
-    if ($LASTEXITCODE -ne 0) { throw 'Unity compilation failed or was unavailable.' }
+    # The trigger request can be interrupted by the successful domain reload.
+    $null = & $unity.Source command recompile --project-path $resolvedProject --format json 2>&1
+    $compile = Wait-Recompile
+    if ($compile.failed -or $compile.compilationFailed -or @($compile.errors).Count -gt 0) {
+        throw "Unity compilation failed: $(@($compile.errors) -join '; ')"
+    }
+
+    Write-Output "Unity compilation: $($compile.status)"
 }
 
 if ($RunTests) {
     $testsJson = (& $unity.Source command list_tests --project-path $resolvedProject --format json) -join "`n"
     if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect project tests.' }
-    $testsResult = $testsJson | ConvertFrom-Json
-    $testCount = [int]$testsResult.data.result.Count
+    $tests = Convert-UnityResult -Json $testsJson
+    $testCount = if ($tests.Count -ne $null) {
+        [int]$tests.Count
+    } elseif ($tests.tests -ne $null) {
+        @($tests.tests).Count
+    } else {
+        @($tests).Count
+    }
     if ($testCount -eq 0) {
         Write-Output 'NO_PROJECT_TESTS: Unity reported zero project tests.'
     } else {

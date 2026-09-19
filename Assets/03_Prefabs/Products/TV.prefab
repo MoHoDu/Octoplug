@@ -316,6 +316,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7461029572030762014}
   - component: {fileID: 6746501452080824052}
+  - component: {fileID: 846790578119807581}
   m_Layer: 0
   m_Name: TV
   m_TagString: Untagged
@@ -360,6 +361,21 @@ MonoBehaviour:
   usageTypes: 8
   capacity: 1
   satisfactionDurationSeconds: 6
+--- !u!114 &846790578119807581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9107956989276310765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3dd7c48b35b46d0b75ad8b79a54d393, type: 3}
+  m_Name: PlacementFootprint
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Grid.PlacementFootprint
+  boundsCollider: {fileID: 306656375666648636}
+  boundsRenderer: {fileID: 0}
+  fallbackSize: {x: 1, y: 1}
 --- !u!1001 &1776776033566426136
 PrefabInstance:
   m_ObjectHideFlags: 0

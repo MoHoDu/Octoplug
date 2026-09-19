@@ -1,3 +1,4 @@
+using System;
 using Octoplug.Power;
 
 namespace Octoplug.Power.Connection
@@ -11,6 +12,8 @@ namespace Octoplug.Power.Connection
     /// </summary>
     public static class PlugSocketConnection
     {
+        public static event Action GraphChanged;
+
         /// <summary>
         /// Connects <paramref name="plug"/> to <paramref name="socket"/> if
         /// the socket is free. Disconnects any existing pairing on
@@ -20,7 +23,7 @@ namespace Octoplug.Power.Connection
         /// </summary>
         public static bool Connect(PlugConnector plug, SocketConnector socket)
         {
-            if (plug == null || socket == null)
+            if (plug == null || socket == null || !socket.IsActiveSocket)
             {
                 return false;
             }
@@ -30,13 +33,15 @@ namespace Octoplug.Power.Connection
                 return false;
             }
 
-            if (plug.ConnectedSocket != socket)
+            if (plug.ConnectedSocket == socket)
             {
-                Disconnect(plug);
+                return true;
             }
 
+            DisconnectInternal(plug, false);
             plug.AssignSocket(socket);
             socket.AssignPlug(plug);
+            GraphChanged?.Invoke();
             return true;
         }
 
@@ -47,9 +52,25 @@ namespace Octoplug.Power.Connection
         /// </summary>
         public static void Disconnect(PlugConnector plug)
         {
+            DisconnectInternal(plug, true);
+        }
+
+        /// <summary>
+        /// Notifies graph-derived presenters and powered-state refresh paths that
+        /// effective topology changed without replacing a Plug/Socket pairing.
+        /// </summary>
+        public static void NotifyTopologyChanged()
+        {
+            GraphChanged?.Invoke();
+        }
+
+        private static bool DisconnectInternal(
+            PlugConnector plug,
+            bool notify)
+        {
             if (plug == null || !plug.IsConnected)
             {
-                return;
+                return false;
             }
 
             var socket = plug.ConnectedSocket;
@@ -59,6 +80,13 @@ namespace Octoplug.Power.Connection
             {
                 socket.ClearPlug();
             }
+
+            if (notify)
+            {
+                GraphChanged?.Invoke();
+            }
+
+            return true;
         }
     }
 }
