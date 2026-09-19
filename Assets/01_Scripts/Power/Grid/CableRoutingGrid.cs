@@ -26,19 +26,15 @@ namespace Octoplug.Power.Grid
     public class CableRoutingGrid
     {
         private readonly float cellSize;
+        private readonly object legacyPlacementOwner = new();
         private readonly Dictionary<GridCoord, GridCellState> cells = new();
 
         /// <summary>
-        /// Cells currently occupied by a placed object (Product, PowerStrip,
-        /// ...) — tracked independently of <see cref="GridCellState"/>
-        /// because the two questions are not the same: a cell a Product
-        /// sits on is not, by itself, blocked for Cable traversal (a cable
-        /// may pass visually behind it), while a Wall cell is blocked for
-        /// both. Nothing currently populates this — it exists so a future
-        /// placement system has one shared place to register/query it
-        /// instead of inventing its own per-system occupancy tracking.
+        /// Placement reservations keyed by cell and owner, tracked independently
+        /// of <see cref="GridCellState"/>. A placed Product or PowerStrip does
+        /// not block Cable traversal; only placement queries consult this map.
         /// </summary>
-        private readonly HashSet<GridCoord> objectOccupied = new();
+        private readonly Dictionary<GridCoord, HashSet<object>> placementOwners = new();
 
         public CableRoutingGrid(float cellSize)
         {
@@ -76,11 +72,14 @@ namespace Octoplug.Power.Grid
             };
         }
 
-        /// <summary>Drops all stored cell data so the grid can be rebuilt from scratch.</summary>
+        /// <summary>
+        /// Drops traversal cell state so room geometry can be rebuilt. Live
+        /// placement reservations survive because traversal rebuilds and object
+        /// lifetimes are independent.
+        /// </summary>
         public void Clear()
         {
             cells.Clear();
-            objectOccupied.Clear();
         }
 
         public GridCellState GetState(GridCoord coord)
@@ -94,23 +93,95 @@ namespace Octoplug.Power.Grid
             return state == GridCellState.Walkable || state == GridCellState.Door;
         }
 
-        /// <summary>Marks (or clears) a cell as occupied by a placed object. Never affects <see cref="IsWalkable"/> — Cable traversal and object placement are independent questions (see <see cref="objectOccupied"/>).</summary>
-        public void SetObjectOccupied(GridCoord coord, bool occupied)
+        /// <summary>
+        /// Marks (or clears) one cell for an owner. Multiple owners are retained
+        /// independently so one object's release cannot erase another object's
+        /// reservation. Never affects <see cref="IsWalkable"/>.
+        /// </summary>
+        public void SetObjectOccupied(GridCoord coord, bool occupied) =>
+            SetObjectOccupied(coord, legacyPlacementOwner, occupied);
+
+        public void SetObjectOccupied(GridCoord coord, object owner, bool occupied)
         {
+            if (owner == null)
+            {
+                return;
+            }
+
             if (occupied)
             {
-                objectOccupied.Add(coord);
+                if (!placementOwners.TryGetValue(coord, out var owners))
+                {
+                    owners = new HashSet<object>();
+                    placementOwners.Add(coord, owners);
+                }
+
+                owners.Add(owner);
+                return;
             }
-            else
+
+            if (!placementOwners.TryGetValue(coord, out var existingOwners))
             {
-                objectOccupied.Remove(coord);
+                return;
+            }
+
+            existingOwners.Remove(owner);
+            if (existingOwners.Count == 0)
+            {
+                placementOwners.Remove(coord);
             }
         }
 
-        public bool IsObjectOccupied(GridCoord coord) => objectOccupied.Contains(coord);
+        public bool IsObjectOccupied(GridCoord coord) =>
+            placementOwners.TryGetValue(coord, out var owners) && owners.Count > 0;
 
-        /// <summary>Whether a future placement system may place an object on this cell: walkable and not already occupied by another object. Cable traversal must keep using <see cref="IsWalkable"/>, not this.</summary>
-        public bool IsFreeForPlacement(GridCoord coord) => IsWalkable(coord) && !objectOccupied.Contains(coord);
+        public bool IsObjectOccupiedByOther(GridCoord coord, object owner)
+        {
+            if (!placementOwners.TryGetValue(coord, out var owners))
+            {
+                return false;
+            }
+
+            foreach (var existingOwner in owners)
+            {
+                if (!ReferenceEquals(existingOwner, owner))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Whether an owner may reserve this cell: walkable and not reserved by
+        /// another owner. Cable traversal must keep using <see cref="IsWalkable"/>.
+        /// </summary>
+        public bool IsFreeForPlacement(GridCoord coord) =>
+            IsWalkable(coord) && !IsObjectOccupied(coord);
+
+        public bool IsFreeForPlacement(GridCoord coord, object owner) =>
+            IsWalkable(coord) && !IsObjectOccupiedByOther(coord, owner);
+
+        /// <summary>Appends every grid cell whose area intersects the supplied world bounds.</summary>
+        public void GetCellsCoveredByBounds(Bounds bounds, List<GridCoord> results)
+        {
+            var inset = Mathf.Min(
+                cellSize * 0.001f,
+                bounds.extents.x * 0.5f,
+                bounds.extents.y * 0.5f,
+                0.0001f);
+            var min = WorldToCell((Vector2)bounds.min + Vector2.one * inset);
+            var max = WorldToCell((Vector2)bounds.max - Vector2.one * inset);
+
+            for (var x = min.X; x <= max.X; x++)
+            {
+                for (var y = min.Y; y <= max.Y; y++)
+                {
+                    results.Add(new GridCoord(x, y));
+                }
+            }
+        }
 
         /// <summary>
         /// Marks every cell covered by <paramref name="bounds"/> with

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -48,8 +47,6 @@ namespace Octoplug.Power.Input
 
         public bool IsDragging { get; private set; }
 
-        private static readonly List<PlugDragInput> ActiveInstances = new();
-
         /// <summary>
         /// Whether <paramref name="worldPos"/> is over any enabled Plug's
         /// hit collider — used by
@@ -60,15 +57,19 @@ namespace Octoplug.Power.Input
         /// </summary>
         public static bool IsPointerOverAnyPlug(Vector2 worldPos)
         {
-            foreach (var instance in ActiveInstances)
-            {
-                if (instance.hitCollider != null && instance.hitCollider.OverlapPoint(worldPos))
-                {
-                    return true;
-                }
-            }
+            return PointerInteractionResolver.IsPointerOverPlug(worldPos);
+        }
 
-            return false;
+        internal bool ContainsPoint(Vector2 worldPos)
+        {
+            return isActiveAndEnabled && hitCollider != null && hitCollider.OverlapPoint(worldPos);
+        }
+
+        internal float SqrDistanceToHitCenter(Vector2 worldPos)
+        {
+            return hitCollider != null
+                ? ((Vector2)hitCollider.bounds.center - worldPos).sqrMagnitude
+                : float.PositiveInfinity;
         }
 
         private void Awake()
@@ -81,12 +82,13 @@ namespace Octoplug.Power.Input
 
         private void OnEnable()
         {
-            ActiveInstances.Add(this);
+            PointerInteractionResolver.Register(this);
         }
 
         private void OnDisable()
         {
-            ActiveInstances.Remove(this);
+            PointerInteractionResolver.Unregister(this);
+            IsDragging = false;
         }
 
         private void Update()
@@ -101,8 +103,7 @@ namespace Octoplug.Power.Input
             {
                 if (mouse.leftButton.wasPressedThisFrame
                     && TryGetPointerWorldPosition(out var downPos)
-                    && hitCollider != null
-                    && hitCollider.OverlapPoint(downPos))
+                    && PointerInteractionResolver.TryCapture(this, downPos))
                 {
                     IsDragging = true;
                     DragStarted?.Invoke();
@@ -123,6 +124,7 @@ namespace Octoplug.Power.Input
             if (mouse.leftButton.wasReleasedThisFrame)
             {
                 IsDragging = false;
+                PointerInteractionResolver.Release(this);
                 DragEnded?.Invoke();
             }
         }

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Octoplug.Power
@@ -10,9 +11,35 @@ namespace Octoplug.Power
     public class HousePowerBudget : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("Total power the house can supply across all active connections, in watts. Demo placeholder — needs real balance data.")]
+        [Tooltip("Current power the house can supply across all active connections, in watts.")]
         private float allowedPowerWatts;
 
+        [SerializeField]
+        [Tooltip("Finalized maximum house power allowance, independent of every PowerStrip.")]
+        private float maxAllowedPowerWatts = 22f;
+
+        public static event Action<HousePowerBudget> AllowanceChanged;
+
         public float AllowedPowerWatts => allowedPowerWatts;
+        public float MaxAllowedPowerWatts => maxAllowedPowerWatts;
+
+        public void SetAllowedPowerWatts(float value)
+        {
+            if (Mathf.Approximately(allowedPowerWatts, value))
+            {
+                return;
+            }
+
+            allowedPowerWatts = value;
+            AllowanceChanged?.Invoke(this);
+        }
+
+        private void OnValidate()
+        {
+            if (Application.isPlaying)
+            {
+                AllowanceChanged?.Invoke(this);
+            }
+        }
     }
 }

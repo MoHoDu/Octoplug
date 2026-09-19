@@ -163,6 +163,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7461029572030762014}
   - component: {fileID: 6159287652759961123}
+  - component: {fileID: 1370839279910896622}
   m_Layer: 0
   m_Name: Heater
   m_TagString: Untagged
@@ -207,6 +208,21 @@ MonoBehaviour:
   usageTypes: 2
   capacity: 1
   satisfactionDurationSeconds: 10
+--- !u!114 &1370839279910896622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9107956989276310765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3dd7c48b35b46d0b75ad8b79a54d393, type: 3}
+  m_Name: PlacementFootprint
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Grid.PlacementFootprint
+  boundsCollider: {fileID: 612850632143549371}
+  boundsRenderer: {fileID: 0}
+  fallbackSize: {x: 1, y: 1}
 --- !u!1 &9198082444431643711
 GameObject:
   m_ObjectHideFlags: 0

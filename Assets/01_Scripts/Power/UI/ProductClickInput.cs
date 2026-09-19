@@ -48,18 +48,35 @@ namespace Octoplug.Power.UI
             ActiveInstances.Remove(this);
         }
 
-        /// <summary>The Product whose click target is under <paramref name="worldPos"/>, or null if none.</summary>
+        /// <summary>The deterministic nearest Product click target under <paramref name="worldPos"/>, or null if none.</summary>
         public static ApplianceSource TryGetProductAt(Vector2 worldPos)
         {
+            ProductClickInput best = null;
+            var bestDistance = float.PositiveInfinity;
+            var bestInstanceId = int.MaxValue;
             foreach (var instance in ActiveInstances)
             {
-                if (instance.hitCollider != null && instance.hitCollider.OverlapPoint(worldPos))
+                if (instance == null
+                    || !instance.isActiveAndEnabled
+                    || instance.product == null
+                    || instance.hitCollider == null
+                    || !instance.hitCollider.OverlapPoint(worldPos))
                 {
-                    return instance.product;
+                    continue;
+                }
+
+                var distance = ((Vector2)instance.hitCollider.bounds.center - worldPos).sqrMagnitude;
+                var instanceId = instance.GetInstanceID();
+                if (distance < bestDistance
+                    || (Mathf.Approximately(distance, bestDistance) && instanceId < bestInstanceId))
+                {
+                    best = instance;
+                    bestDistance = distance;
+                    bestInstanceId = instanceId;
                 }
             }
 
-            return null;
+            return best != null ? best.product : null;
         }
     }
 }

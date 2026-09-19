@@ -201,6 +201,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.SocketConnector
   connectedPlug: {fileID: 0}
+  interactionCollider: {fileID: 0}
+  interactionRenderer: {fileID: 0}
+  fallbackInteractionSize: {x: 0.42, y: 0.42}
+  terminalEndpoint: 1
+  localApproachDirection: {x: 0, y: 1}
 --- !u!1 &8272959175253311534
 GameObject:
   m_ObjectHideFlags: 0

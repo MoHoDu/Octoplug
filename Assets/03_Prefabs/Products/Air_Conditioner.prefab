@@ -316,6 +316,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4405093568973726673}
   - component: {fileID: 1175672663246097114}
+  - component: {fileID: 1135438898103092668}
   m_Layer: 0
   m_Name: Air_Conditioner
   m_TagString: Untagged
@@ -360,6 +361,21 @@ MonoBehaviour:
   usageTypes: 1
   capacity: 1
   satisfactionDurationSeconds: 12
+--- !u!114 &1135438898103092668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7271428992664325792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3dd7c48b35b46d0b75ad8b79a54d393, type: 3}
+  m_Name: PlacementFootprint
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Grid.PlacementFootprint
+  boundsCollider: {fileID: 8494611989821295501}
+  boundsRenderer: {fileID: 0}
+  fallbackSize: {x: 1, y: 1}
 --- !u!1001 &454610682267884079
 PrefabInstance:
   m_ObjectHideFlags: 0
