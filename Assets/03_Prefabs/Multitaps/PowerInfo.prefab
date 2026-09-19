@@ -245,7 +245,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!114 &5831572214927432772
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -306,6 +306,11 @@ MonoBehaviour:
   - {fileID: 6616819513928268875}
   - {fileID: 7820750948811844896}
   - {fileID: 3081934746248642618}
+  - {fileID: 6114635443542892503}
+  - {fileID: 1094257624143033064}
+  - {fileID: 5530056052037055448}
+  - {fileID: 3017711490049291213}
+  - {fileID: 5719179561386386161}
   usedColorSource: {fileID: 4770029267750820745}
   unusedColorSource: {fileID: 8472180263255001951}
 --- !u!1 &2649871418625809251
