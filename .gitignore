@@ -122,3 +122,7 @@ InitTestScene*.unity*
 /.harness/local/
 /.harness/cache/
 /.harness/logs/
+
+# Per-developer workspace files
+/.vscode/
+/TODO.md

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5523b4e01ae254f44b7cbe2181b2132d, type: 3}
+  m_Name: UsageTypeIconLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.UI.UsageTypeIconLibrary
+  entries:
+  - usageType: 1
+    icon: {fileID: 21300000, guid: cd070bd56a714074ea245f8cad7ec14f, type: 3}
+  - usageType: 2
+    icon: {fileID: 21300000, guid: f5bbbc5521d2e3840af6bfec3dadc0cc, type: 3}
+  - usageType: 4
+    icon: {fileID: 21300000, guid: c1b6354495b1436489f0b4dcaeaca578, type: 3}
+  - usageType: 8
+    icon: {fileID: 21300000, guid: d56a9227a2f335248943236da9186b9a, type: 3}

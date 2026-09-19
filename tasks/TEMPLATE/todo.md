@@ -8,3 +8,9 @@
 - [ ] Run code or Unity checks required by the Task.
 - [ ] Review changed files and scope.
 - [ ] Update handoff and Domain Map if needed.
+
+## Verification
+
+- [ ] Logic Test
+- [ ] Runtime Integration
+- [ ] Human Play Check

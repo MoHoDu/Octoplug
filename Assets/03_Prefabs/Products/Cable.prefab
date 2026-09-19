@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 487011246280901494}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.71, y: 0.17, z: 0}
+  m_LocalPosition: {x: 0.19, y: -0.01, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -40,6 +40,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6488098056018794903}
+  - component: {fileID: 6427262760540493901}
+  - component: {fileID: 3735595597410854830}
+  - component: {fileID: 6671568350838524945}
   m_Layer: 0
   m_Name: Plug
   m_TagString: Untagged
@@ -56,7 +59,7 @@ Transform:
   m_GameObject: {fileID: 3375172503025555741}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2, y: 0.15, z: 0}
+  m_LocalPosition: {x: 2, y: -0.01, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -64,6 +67,68 @@ Transform:
   - {fileID: 5265032282345740554}
   m_Father: {fileID: 3317846646696362550}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6427262760540493901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3375172503025555741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a740a0718fd19704babc77179989e94d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.PlugConnector
+  connectedSocket: {fileID: 0}
+--- !u!58 &3735595597410854830
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3375172503025555741}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_Radius: 0.65
+--- !u!114 &6671568350838524945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3375172503025555741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee687aa9c5d72964ea8c8b21cdd1679e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Input.PlugDragInput
+  hitCollider: {fileID: 0}
 --- !u!1 &4747229544669280427
 GameObject:
   m_ObjectHideFlags: 0
@@ -73,6 +138,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3317846646696362550}
+  - component: {fileID: 1602058252936024809}
+  - component: {fileID: 7021133264990403045}
+  - component: {fileID: 3714333070783266528}
   m_Layer: 0
   m_Name: Cable
   m_TagString: Untagged
@@ -97,6 +165,61 @@ Transform:
   - {fileID: 6488098056018794903}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1602058252936024809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4747229544669280427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d6d9c56899e5854e9377520f01f6d5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.CableInfo
+  cableLength: 3
+  origin: {fileID: 329187500926140319}
+  plug: {fileID: 6427262760540493901}
+  line: {fileID: 3272578014529664898}
+--- !u!114 &7021133264990403045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4747229544669280427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b349abfd16af28f4695c8fcc4d5fdce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Cable.CableRoutingController
+  cableInfo: {fileID: 1602058252936024809}
+  dragInput: {fileID: 6671568350838524945}
+  pathRenderer: {fileID: 3455934663357564686}
+  nearestValidSearchRadius: 24
+  socketVisualRadiusMultiplier: 1
+  socketCellPaddingMultiplier: 1.5
+  socketDetachRadius: 0.4
+  socketApproachSearchRadius: 3
+  minRenderSegmentLength: 0.15
+  powerRejectFallbackDistance: 0.6
+  connectedSortingOrder: 5
+  draggingSortingOrder: 6
+--- !u!114 &3714333070783266528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4747229544669280427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae3358e89ea75c640b04e95482d9df75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Cable.CablePowerFlowEffect
+  flowLine: {fileID: 1887566821316545948}
+  scrollSpeed: 1.5
+  previewPowered: 0
 --- !u!1 &5164959249924073508
 GameObject:
   m_ObjectHideFlags: 0
@@ -106,6 +229,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7117643973873610630}
+  - component: {fileID: 1887566821316545948}
   m_Layer: 0
   m_Name: ElectricEffects
   m_TagString: Untagged
@@ -128,6 +252,125 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5265032282345740554}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!120 &1887566821316545948
+LineRenderer:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5164959249924073508}
+  m_Enabled: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 0
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: e443815396654a841808a01b0372ca01, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 6
+  m_MaskInteraction: 0
+  m_Positions:
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 1}
+  m_Parameters:
+    serializedVersion: 3
+    widthMultiplier: 0.7
+    widthCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.140625
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.140625
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    colorGradient:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    numCornerVertices: 0
+    numCapVertices: 0
+    alignment: 0
+    textureMode: 1
+    textureScale: {x: 1, y: 1}
+    shadowBias: 0.5
+    generateLightingData: 0
+  m_UseWorldSpace: 0
+  m_Loop: 0
+  m_ApplyActiveColorSpace: 1
 --- !u!1 &7687061303726291283
 GameObject:
   m_ObjectHideFlags: 0
@@ -138,6 +381,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5265032282345740554}
   - component: {fileID: 3272578014529664898}
+  - component: {fileID: 3455934663357564686}
   m_Layer: 0
   m_Name: Line
   m_TagString: Untagged
@@ -208,11 +452,11 @@ LineRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 5
   m_MaskInteraction: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: 1.3, y: 0, z: 1}
+  - {x: -1.807, y: 0, z: 0}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 1
@@ -220,21 +464,30 @@ LineRenderer:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: 0.020270271
+        time: 0
         value: 0.140625
         inSlope: 0
         outSlope: 0
         tangentMode: 0
         weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.140625
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
     colorGradient:
       serializedVersion: 2
-      key0: {r: 0.5294118, g: 0.5882353, b: 0.5568628, a: 1}
-      key1: {r: 0.5294118, g: 0.5882353, b: 0.5568628, a: 1}
+      key0: {r: 0.27, g: 0.3, b: 0.284, a: 1}
+      key1: {r: 0.27058825, g: 0.3019608, b: 0.28627452, a: 1}
       key2: {r: 0, g: 0, b: 0, a: 0}
       key3: {r: 0, g: 0, b: 0, a: 0}
       key4: {r: 0, g: 0, b: 0, a: 0}
@@ -271,6 +524,21 @@ LineRenderer:
   m_UseWorldSpace: 0
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!114 &3455934663357564686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7687061303726291283}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea4e6b04bf087b4439b6257568566dd3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.Cable.CablePathRenderer
+  line: {fileID: 3272578014529664898}
+  flowLine: {fileID: 1887566821316545948}
+  cornerVertices: 4
 --- !u!1 &7965451693130865953
 GameObject:
   m_ObjectHideFlags: 0
@@ -298,7 +566,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6488098056018794903}
@@ -350,10 +618,10 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 6
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 6c98f583e595dfd4294d0d73b2d45ee6, type: 3}
-  m_Color: {r: 0.18431373, g: 0.25490198, b: 0.21960786, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 21a9729a813d08b4aaa6a4c4b5ca5823, type: 3}
+  m_Color: {r: 0.27058825, g: 0.3019608, b: 0.28627452, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

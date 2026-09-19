@@ -7,6 +7,7 @@ Octoplug is a Unity 6 2D minimalist puzzle/simulation about supplying shared-hou
 1. Read this file only; do not recursively load every link.
 2. Locate the current folder under `tasks/active/`.
 3. Read its `meta.md`, `plan.md`, `todo.md`, and `handoff.md`—not `log.md` by default.
+   Do not load `tasks/**/history/` by default; read archived history only when the current task requires it.
 4. Read one relevant map from `docs/domains/INDEX.md`.
 5. Read one current-stage skill from `.agents/skills/`.
 6. Check Open Decisions and Exclusive Assets before editing.
@@ -41,6 +42,10 @@ If no current Task exists, use the `create-task` procedure. Do not start gamepla
 - Git: `harness/policies/git-workflow.md`
 - Task lifecycle: `harness/policies/task-lifecycle.md`
 - Context budget: `harness/policies/context-budget.md`
+- Task context compaction: `harness/policies/task-context-compaction.md`
+- Click/Drag/Touch/UI 기능은 `harness/policies/runtime-interaction-validation.md`를 따른다.
+- 구현 전 사람이 먼저 준비해야 할 Scene/Prefab/UI가 부족하면 `harness/policies/human-setup-required.md`를 따른다.
+- Task 완료 및 Git 마무리는 `harness/policies/task-lifecycle.md`와 `git-workflow.md`를 따른다.
 
 Roles live under `harness/roles/`. Policies take precedence over role descriptions and skills.
 
@@ -53,8 +58,11 @@ Project procedures live under `.agents/skills/`. Do not copy or replace the user
 - Fast harness checks: `pwsh -File scripts/verify-fast.ps1`
 - Full harness checks: `pwsh -File scripts/verify-harness.ps1`
 - Unity checks: `pwsh -File scripts/verify-unity.ps1 -ProjectPath <task-worktree>`
+- Task context check: `pwsh -File scripts/verify-task-context.ps1`
 
 No project tests must be reported as `NO_PROJECT_TESTS`, not as a pass. Record failures, skipped checks, and environment limitations faithfully in the Task handoff.
+
+If task context reports `COMPACT_REQUIRED`, compact the active Task before substantial new work. Archived `history/` content is preserved but is not default-read context.
 
 ## Narrow Search Order
 
