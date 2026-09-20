@@ -100,6 +100,12 @@ namespace Octoplug.Power.Input
                 return;
             }
 
+            if (Octoplug.GameFlow.GameplayInputLock.IsLocked)
+            {
+                capturedTarget = "GameplayInputLock";
+                return;
+            }
+
             capturedTarget = ResolvePlug(worldPos);
             capturedTarget ??= Octoplug.Power.UI.ProductClickInput.TryGetProductAt(worldPos);
             capturedTarget ??= ResolveSocket(worldPos);

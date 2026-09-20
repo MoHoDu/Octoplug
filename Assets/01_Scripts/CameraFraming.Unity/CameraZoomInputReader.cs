@@ -30,6 +30,12 @@ namespace Octoplug.CameraFraming.Unity
 
         private void Update()
         {
+            if (Octoplug.GameFlow.GameplayInputLock.IsLocked)
+            {
+                previousPinchDistance = null;
+                return;
+            }
+
             ReadScroll();
             ReadPinch();
         }

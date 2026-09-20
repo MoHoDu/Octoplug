@@ -6,14 +6,14 @@ namespace Octoplug.ResidentDemand
         {
             return DemandBalanceCatalog.FromAuthoringRows(new[]
             {
-                Row("D001", true, 1, 10, "Cold", null, 6f, 10f, 10, 5, -8, 4f),
-                Row("D002", true, 1, 10, "Fun", null, 6f, 10f, 10, 5, -8, 4f),
-                Row("D003", true, 2, 9, "Food", null, 7f, 9f, 12, 5, -8, 4f),
-                Row("D004", true, 2, 9, "Hot", null, 7f, 9f, 12, 5, -8, 4f),
-                Row("D005", true, 15, 6, "Cold", "Fun", 6f, 8f, 18, 7, -10, 5f),
-                Row("D006", true, 15, 6, "Food", "Hot", 6f, 8f, 20, 7, -10, 5f),
-                Row("D007", true, 15, 4, "Cold", "Food", 5f, 7f, 22, 8, -12, 5f),
-                Row("D008", true, 15, 4, "Hot", "Fun", 5f, 7f, 22, 8, -12, 5f),
+                Row("D001", true, 1, 10, "Cold", null, 6f, 10f, 10, 5, -8, 6f),
+                Row("D002", true, 1, 10, "Fun", null, 6f, 10f, 10, 5, -8, 6f),
+                Row("D003", true, 2, 9, "Food", null, 7f, 9f, 12, 5, -8, 6f),
+                Row("D004", true, 2, 9, "Hot", null, 7f, 9f, 12, 5, -8, 6f),
+                Row("D005", true, 15, 6, "Cold", "Fun", 6f, 8f, 18, 7, -10, 6f),
+                Row("D006", true, 15, 6, "Food", "Hot", 6f, 8f, 20, 7, -10, 6f),
+                Row("D007", true, 15, 4, "Cold", "Food", 5f, 7f, 22, 8, -12, 6f),
+                Row("D008", true, 15, 4, "Hot", "Fun", 5f, 7f, 22, 8, -12, 6f),
             });
         }
 

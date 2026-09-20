@@ -78,6 +78,7 @@ namespace Octoplug.ResidentDemand.Unity
                     progressed = true;
                 }
 
+                var wasCooldown = resident.Status == ResidentDemandStatus.Cooldown;
                 var outcome = resident.Advance(Time.deltaTime);
                 if (outcome != null)
                 {
@@ -91,6 +92,13 @@ namespace Octoplug.ResidentDemand.Unity
                     _requestSequenceByResident[resident.ResidentNumber.Value] =
                         _nextRequestSequence++;
                     changed = true;
+                }
+                else if (wasCooldown && resident.Status == ResidentDemandStatus.None)
+                {
+                    if (TryStartDemand(resident))
+                    {
+                        changed = true;
+                    }
                 }
             }
 

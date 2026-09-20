@@ -85,6 +85,15 @@ namespace Octoplug.Power.UI
 
         private void Update()
         {
+            if (Octoplug.GameFlow.GameplayInputLock.IsLocked)
+            {
+                if (panel != null && panel.gameObject.activeSelf)
+                {
+                    Hide();
+                }
+                return;
+            }
+
             var mouse = Mouse.current;
             if (mouse == null)
             {
