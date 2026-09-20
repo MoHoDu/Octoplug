@@ -2,10 +2,10 @@
 
 ## Goal
 
-- InfinityMode에서 핵심 코어 루프를 플레이 가능한 상태로 완성
-- 최종 목표: 요구 → 전력 연결 → 만족도 → 레벨업 → 방 확장
+InfinityMode에서 핵심 코어 루프를 플레이 가능한 상태로 완성
+최종 목표: 요구 → 전력 연결 → 만족도 → 레벨업 → 방 확장 → Reward 선택
 
-## Current
+## Completed (Human Verification PASS)
 
 - [x] Grid 기반 8방향 Cable Routing
 - [x] Plug Drag
@@ -14,76 +14,86 @@
 - [x] House Power Validation
 - [x] Powered / Power Flow
 - [x] ProductInfo / Tooltip
-- [ ] PowerStrip
-- [ ] Resident Demand
-- [ ] Satisfaction / Level Up
-- [ ] Room Generation Integration
-- [ ] Reward
-- [ ] Demo Polish
+- [x] PowerStrip (Placement, Drag, Power Chain, Allowed Power, Runtime Socket/CableLength upgrade)
+- [x] Room Generation Core (pure logic, 66 tests PASS)
+- [x] Camera Core (Zoom, Pan, Hint Framing, 46 tests PASS)
+- [x] Room Generation + Camera Core merge into dev
 
-## Execution Order
+## Current
 
-### 1. PowerStrip
-- Head Drag
-- Room 내부 이동 제한
-- Wall Outlet → PowerStrip 연결
-- Product → PowerStrip Socket 연결
-- PowerStrip Allowed Power
+- [ ] Design Documentation & Integration Scope (TASK-20260920-009 Phase 1)
+- [ ] TASK-20260920-008 Unity Verification (pending Editor environment)
 
-### 2. Resident Demand
-- 요구 생성
-- UsageType 연결
-- 대기 / 사용 상태
-- 요구 성공 / 실패
+## Execution Order (Confirmed 2026-09-20)
 
-### 3. Satisfaction / Level Up
-- 만족도 증감
-- Level Gauge
-- Level Up
-- Rent 획득
+### 1. Production Room Integration
 
-### 4. Merge Room Generation Core
-- branch: feat/infinity-room-generation-core
-- pure logic 검증 후 merge
-- Scene / Prefab 변경 없는지 확인
-- Main Grid와 호환 확인
+- Wire RoomGenerationController into production `Room.prefab`
+- RoomPlan → CableRoutingGrid bridge
+- Dynamic Doors applied to production prefab
+- Unified Wall Outlet + ActiveSocketCount generation
+- Grid rebuild on Room unlock
+- HintLocked / UnlockedGenerated in InfiniteMode scene
 
-### 5. Room Generation Integration
-- HintLocked Room
-- Level Up → Unlock
-- Room prefab 생성
-- DoorPlan 적용
-- Grid rebuild
-- 다음 Hint 생성
+### 2. Production Camera Integration
 
-### 6. Reward
-- Reward UI
-- Upgrade 선택
-- 대상 선택
-- Cable Length / Power / Socket 강화
+- Wire Zoom/Pan/Hint adapters into InfiniteMode Cinemachine brain
+- Camera Reveal stub: zoom-out to show new Room on Level Up
+  (triggered by GameFlow, not by Camera itself)
 
-### 7. Demo Polish
-- Settings
-- Result
+### 3. InfiniteMode Room/Camera/Power Full Regression
+
+- End-to-end Human Verification of Room + Camera + Power/Connection in InfiniteMode
+
+### 4. Resident Demand
+
+- Need generation
+- UsageType connection
+- Wait / Active state
+- Need success / failure
+
+### 5. Satisfaction / Game Over
+
+- Satisfaction 0–100
+- Need result → Satisfaction gain/loss
+- Satisfaction = 0 → Game Over
+
+### 6. EXP / Level Progression
+
+- EXP accumulation from Need outcomes
+- EXP Max → Level Up trigger
+- EXP threshold scaling with room count (formula: Open Decision)
+
+### 7. GameFlow Orchestration
+
+- GameManager / GameFlowController
+- Level-Up sequence: Room Generation → Camera Reveal → Pause → Wait → Reward → Resume
+- Orchestration via events: RoomGenerated, RoomContentReady, CameraRevealCompleted, etc.
+- No polling; no Scene hierarchy search
+
+### 8. Reward System + Target Selection
+
+- 3-choice Reward display on Level Up
+- Reward Pool: Basic Rewards + Upgrades + Composite Rewards
+- Immediate-apply vs. Target-required flow
+- Target Selection: dim world → pick target → apply
+
+### 9. Endless / Result / Restart
+
+- Game Over screen
 - Best Score
+- Restart
+
+### 10. Polish
+
+- Settings
 - Sound
 - Deferred visual TODO
 
-## Parallel Work
+---
 
-### Main Worktree
-branch: feat/infinity-power-connection
+## Notes
 
-- PowerStrip
-- Resident
-- Satisfaction / Level Up
-
-### Room Generation Worktree
-branch: feat/infinity-room-generation-core
-
-- Room placement core
-- Door planning
-- Locked / Unlocked state
-
-### Merge Point
-Satisfaction / Level Up 완료 직후 Room Generation Core merge
+- GameFlow and Reward are **not** mixed into Production Room/Camera Integration tasks.
+- No Rent, no Currency, no separate Upgrade Phase. See:
+  `docs/decisions/infinity-progression-and-reward-loop.md`

@@ -57,7 +57,22 @@ The verified integration exists only in the isolated copied scene `Assets/00_Sce
 
 ## Design Direction
 
-The concept document does not define production Camera behavior. The current implementation supports the copied Room Generation validation scene and the user's explicit Zoom/Hint/Pan decisions. Transfer into Infinite Mode, cinematic behavior, automatic Camera relocation, and session-level Camera ownership remain out of scope.
+The concept document does not define production Camera behavior. The current implementation supports the copied Room Generation validation scene and the user's explicit Zoom/Hint/Pan decisions. Transfer into Infinite Mode, cinematic behavior, and session-level Camera ownership remain deferred.
+
+### Camera Reveal (confirmed 2026-09-20)
+
+On Level Up, the Camera must automatically zoom out to show the newly generated Room to
+the player before the Reward Phase begins.
+
+- Camera Reveal is a zoom-out operation (similar in mechanism to Hint framing, but
+  triggered by the GameFlow rather than by Room Generation's HintRoomCreated event).
+- Camera does **not** decide when to reveal; it responds to a request from future
+  `GameManager` / `GameFlowController`.
+- Camera must emit a `CameraRevealCompleted` event (exact name at implementation time)
+  so GameFlow knows when to proceed to the Reward Phase.
+- Camera is **not** responsible for EXP, Level Up judgment, Satisfaction, or Reward.
+
+See: `docs/decisions/infinity-progression-and-reward-loop.md` section 7 and 8.
 
 ## Related Domains
 

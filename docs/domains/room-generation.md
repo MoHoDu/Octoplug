@@ -77,10 +77,60 @@ The concept document describes procedural room generation and unlocking a new ro
 
 Not implemented; recorded so a later Game Flow Task does not let Room Generation absorb responsibilities that belong to session orchestration.
 
-- Room Generation must stay a request/response service: it creates/promotes Rooms only when asked, and never itself decides *when* a Room should unlock. That decision belongs to a future `GameManager`/`GameFlowController`.
-- Expected shape of the boundary (exact names may differ once implemented against the production controller):
-  - `GameManager` → `PromoteCurrentHint()` (promote the exact stored hint plan; today's equivalent is `RoomGenerationTestController.PromoteStoredPlanAndPlanFollowing()`), and a distinct `CreateNextHint()`-style entry point if promotion and planning-the-next-hint ever need to be triggered independently instead of together.
-  - Room Generation → `HintRoomCreated` (already established; unchanged) tells the outside world a hint now exists — it does not push UI or progression state.
-- Room Generation must **not**: compute EXP, judge Level Up, judge Reward eligibility, or write to `UI_RoomInfo`/`GameStatusInfo` directly.
-- The intended future loop, owned entirely outside Room Generation: Resident Demand resolved → Satisfaction/EXP increases → Level Up judged → Reward if applicable → existing Hint Room unlocked (Room Generation promotes it) → next Hint Room created (Room Generation plans it) → unlocked Room count updated → Game Status UI updated.
-- `UI_RoomInfo` reads the authoritative unlocked-Room-count state from `GameManager`/a UI coordinator, not from Room Generation directly. `GameStatusInfo` reads authoritative EXP/Level state the same way. Room Generation exposes state (`RoomGenerationState`/`UnlockedLayout`) for that reader to consume; it does not write to either UI prefab itself.
+See also: `docs/decisions/infinity-progression-and-reward-loop.md` — the authoritative confirmed design.
+
+### Room Generation responsibilities (confirmed)
+
+- Room planning (RoomPlan, candidates, bounds)
+- Hint state: HintLocked / UnlockedGenerated
+- Promoting the stored hint plan on unlock
+- Planning the next hint after promotion
+- Door planning and application
+- Room content generation hooks (Products, Wall Outlets inside the new room)
+- Emitting generation events for external orchestration
+
+### Room Generation must NOT
+
+- Compute EXP or judge Level Up
+- Judge Reward eligibility or start the Reward Phase
+- Calculate or update Satisfaction
+- Write to `UI_RoomInfo` or `GameStatusInfo` directly
+- Decide *when* a Room should unlock — that belongs to `GameManager` / `GameFlowController`
+
+### Future GameFlow hooks (intent catalogue; exact names match production style at implementation time)
+
+| Hook | Direction | Intent |
+|---|---|---|
+| `RoomGenerated` | Room Generation → GameFlow | New room instance exists in scene |
+| `RoomUnlocked` | Room Generation → GameFlow | Hint promoted to unlocked |
+| `RoomContentReady` | Room Generation → GameFlow | Products / Wall Outlets inside room are ready |
+| `NextHintCreated` | Room Generation → GameFlow | Next locked hint room planned and placed |
+
+GameFlow must orchestrate the Level-Up sequence through these events/APIs without
+polling the Scene hierarchy.
+
+### Expected API boundary (exact names TBD)
+
+- `GameManager` → `PromoteCurrentHint()`: promote the exact stored hint plan.
+- `GameManager` → `CreateNextHint()` or combined: plan the following hint.
+- Room Generation → `HintRoomCreated` (already established; unchanged).
+
+### Confirmed Level-Up sequence (owned by future GameFlow, not Room Generation)
+
+```
+Resident Need resolved
+→ EXP increases
+→ EXP Max reached
+→ Room Generation requested → RoomGenerated / RoomContentReady
+→ Camera Reveal requested → CameraRevealCompleted
+→ Game Pause + 1-second wait
+→ Reward 3-choice
+→ Reward applied
+→ Game resumes
+```
+
+Room Generation fires first; Camera Reveal follows; Reward comes last.
+
+- `UI_RoomInfo` reads unlocked-Room-count from `GameManager` / a UI coordinator, not from Room Generation.
+- `GameStatusInfo` reads EXP/Level state the same way.
+- Room Generation exposes state (`RoomGenerationState`/`UnlockedLayout`) for that reader.
