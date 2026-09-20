@@ -52,17 +52,35 @@ namespace Octoplug.CameraFraming.Unity
         private float zoomVelocity;
         private ZoomRange zoomRange;
         private bool initialized;
+        private bool revealCompletionPending;
 
-        private void OnValidate()
-        {
-            if (cinemachineCamera == null || outputCamera == null || zoomInput == null)
-            {
-                Debug.LogError($"{nameof(HouseCameraZoomController)} requires Cinemachine camera, output camera, and zoom input references.", this);
-            }
-        }
+        public event Action CameraMotionStarted;
+        public event Action CameraRevealCompleted;
 
         private void Awake()
         {
+            Initialize();
+        }
+
+#if UNITY_EDITOR
+        public void InitializeForVerification()
+        {
+            Initialize();
+        }
+
+        public void TickForVerification()
+        {
+            Update();
+        }
+#endif
+
+        private void Initialize()
+        {
+            if (initialized)
+            {
+                return;
+            }
+
             if (cinemachineCamera == null || outputCamera == null)
             {
                 throw new InvalidOperationException($"{nameof(HouseCameraZoomController)} requires a Cinemachine camera and an output camera reference.");
@@ -103,14 +121,20 @@ namespace Octoplug.CameraFraming.Unity
             }
 
             var current = cinemachineCamera.Lens.OrthographicSize;
-            if (Mathf.Approximately(current, targetOrthographicSize))
+            if (!Mathf.Approximately(current, targetOrthographicSize))
             {
-                return;
+                var next = zoomSmoothing <= 0f
+                    ? targetOrthographicSize
+                    : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity, zoomSmoothing);
+                if (Mathf.Abs(next - targetOrthographicSize) <= 0.001f)
+                {
+                    next = targetOrthographicSize;
+                }
+
+                cinemachineCamera.Lens.OrthographicSize = next;
             }
 
-            cinemachineCamera.Lens.OrthographicSize = zoomSmoothing <= 0f
-                ? targetOrthographicSize
-                : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity, zoomSmoothing);
+            CompleteRevealIfSettled();
         }
 
         /// <summary>Applies a manual zoom-input delta (from <see cref="CameraZoomInputReader"/>), clamped to the current zoom range.</summary>
@@ -121,7 +145,14 @@ namespace Octoplug.CameraFraming.Unity
                 return;
             }
 
-            targetOrthographicSize = zoomRange.Clamp(targetOrthographicSize + sizeDelta);
+            var nextTarget = zoomRange.Clamp(targetOrthographicSize + sizeDelta);
+            if (Mathf.Approximately(nextTarget, targetOrthographicSize))
+            {
+                return;
+            }
+
+            targetOrthographicSize = nextTarget;
+            CameraMotionStarted?.Invoke();
         }
 
         /// <summary>Recomputes the dynamic maximum zoom-out from the current full house bounds.</summary>
@@ -149,6 +180,27 @@ namespace Octoplug.CameraFraming.Unity
         /// </summary>
         public void RequestHintFraming(RoomBounds2D hintBounds)
         {
+            RequestZoomOutFraming(hintBounds);
+        }
+
+        /// <summary>
+        /// Requests an externally orchestrated room reveal and reports completion after the
+        /// zoom-only framing target is reached. The request never moves the camera or zooms in.
+        /// </summary>
+        public void RequestRoomReveal(RoomBounds2D roomBounds)
+        {
+            if (!initialized)
+            {
+                return;
+            }
+
+            revealCompletionPending = true;
+            RequestZoomOutFraming(roomBounds);
+            CompleteRevealIfSettled();
+        }
+
+        private void RequestZoomOutFraming(RoomBounds2D bounds)
+        {
             if (!initialized)
             {
                 return;
@@ -159,7 +211,7 @@ namespace Octoplug.CameraFraming.Unity
                 new Point2D(cameraPosition.x, cameraPosition.y),
                 targetOrthographicSize,
                 outputCamera.aspect,
-                hintBounds,
+                bounds,
                 houseFramingMargin);
 
             var result = HintFramingCalculator.Compute(request);
@@ -169,17 +221,29 @@ namespace Octoplug.CameraFraming.Unity
             }
 
             targetOrthographicSize = result.TargetOrthographicSize;
+            CameraMotionStarted?.Invoke();
 
             // The dynamic max (see RecomputeDynamicMaxOrthographicSize) is derived only from
-            // already-unlocked rooms, so it cannot yet know about a brand-new hint room that sits
-            // just outside the current house footprint. Showing the hint's full bounds must never
-            // be cut short by that stale, house-only ceiling, so the effective range is widened to
-            // match here instead of clamping the framing result down to it. This does not change
-            // how the dynamic max itself is computed from house bounds.
+            // already-unlocked rooms, so it cannot yet know about newly visible bounds outside the
+            // current house footprint. Framing must never be cut short by that stale ceiling.
             if (targetOrthographicSize > zoomRange.Max)
             {
                 zoomRange = new ZoomRange(zoomRange.Min, targetOrthographicSize);
             }
+        }
+
+        private void CompleteRevealIfSettled()
+        {
+            if (!revealCompletionPending
+                || !Mathf.Approximately(
+                    cinemachineCamera.Lens.OrthographicSize,
+                    targetOrthographicSize))
+            {
+                return;
+            }
+
+            revealCompletionPending = false;
+            CameraRevealCompleted?.Invoke();
         }
     }
 }

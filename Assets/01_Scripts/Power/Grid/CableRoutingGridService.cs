@@ -118,7 +118,7 @@ namespace Octoplug.Power.Grid
         /// <summary>Registers one room's floor area, then overlays its wall and door colliders.</summary>
         public void RebuildFromRoom(RoomArea room)
         {
-            if (room == null || room.FloorArea == null)
+            if (room == null || !room.IsGameplayEnabled || room.FloorArea == null)
             {
                 return;
             }

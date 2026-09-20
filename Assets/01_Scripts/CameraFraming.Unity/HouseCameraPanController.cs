@@ -37,13 +37,10 @@ namespace Octoplug.CameraFraming.Unity
         private RoomBounds2D houseBounds;
         private bool hasHouseBounds;
 
+        public event Action CameraMotionStarted;
+
         private void OnValidate()
         {
-            if (cinemachineCamera == null || outputCamera == null || panInput == null)
-            {
-                Debug.LogError($"{nameof(HouseCameraPanController)} requires Cinemachine camera, output camera, and Pan input references.", this);
-            }
-
             if (panBoundaryMargin < 0f || float.IsNaN(panBoundaryMargin) || float.IsInfinity(panBoundaryMargin))
             {
                 Debug.LogError($"{nameof(HouseCameraPanController)} boundary margin must be a non-negative finite value.", this);
@@ -101,7 +98,14 @@ namespace Octoplug.CameraFraming.Unity
             var clamped = range.Clamp(
                 new Point2D(current.x, current.y),
                 new Point2D(current.x + worldDelta.x, current.y + worldDelta.y));
-            cinemachineCamera.transform.position = new Vector3(clamped.X, clamped.Y, current.z);
+            var next = new Vector3(clamped.X, clamped.Y, current.z);
+            if (next == current)
+            {
+                return;
+            }
+
+            cinemachineCamera.transform.position = next;
+            CameraMotionStarted?.Invoke();
         }
     }
 }

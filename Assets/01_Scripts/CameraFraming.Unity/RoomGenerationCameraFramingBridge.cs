@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Octoplug.RoomGeneration;
 using Octoplug.RoomGeneration.Unity;
@@ -6,15 +7,13 @@ using UnityEngine;
 namespace Octoplug.CameraFraming.Unity
 {
     /// <summary>
-    /// The only connection between Room Generation and the camera: Room Generation announces that a
-    /// hint room was created (<see cref="RoomGenerationTestController.HintRoomCreated"/>) and this
-    /// bridge asks the camera to keep its dynamic max zoom in sync and to frame that hint. Neither
-    /// side is otherwise aware of the other, and no global event bus is introduced.
+    /// The sole production Room Generation to Camera connection. Automatic Hint framing follows
+    /// Room Generation events, while future GameFlow can explicitly request and await Room Reveal.
     /// </summary>
     public sealed class RoomGenerationCameraFramingBridge : MonoBehaviour
     {
         [SerializeField]
-        private RoomGenerationTestController roomGeneration;
+        private ProductionRoomGenerationController roomGeneration;
 
         [SerializeField]
         private HouseCameraZoomController cameraZoom;
@@ -22,11 +21,14 @@ namespace Octoplug.CameraFraming.Unity
         [SerializeField]
         private HouseCameraPanController cameraPan;
 
-        private void OnValidate()
+        public event Action CameraRevealCompleted;
+
+        private void Awake()
         {
             if (roomGeneration == null || cameraZoom == null || cameraPan == null)
             {
-                Debug.LogError($"{nameof(RoomGenerationCameraFramingBridge)} requires Room Generation controller plus camera zoom and Pan references.", this);
+                throw new InvalidOperationException(
+                    $"{nameof(RoomGenerationCameraFramingBridge)} requires Room Generation controller plus camera zoom and Pan references.");
             }
         }
 
@@ -34,7 +36,12 @@ namespace Octoplug.CameraFraming.Unity
         {
             if (roomGeneration != null)
             {
-                roomGeneration.HintRoomCreated += OnHintRoomCreated;
+                roomGeneration.NextHintCreated += OnNextHintCreated;
+            }
+
+            if (cameraZoom != null)
+            {
+                cameraZoom.CameraRevealCompleted += OnCameraRevealCompleted;
             }
         }
 
@@ -42,11 +49,30 @@ namespace Octoplug.CameraFraming.Unity
         {
             if (roomGeneration != null)
             {
-                roomGeneration.HintRoomCreated -= OnHintRoomCreated;
+                roomGeneration.NextHintCreated -= OnNextHintCreated;
+            }
+
+            if (cameraZoom != null)
+            {
+                cameraZoom.CameraRevealCompleted -= OnCameraRevealCompleted;
             }
         }
 
-        private void OnHintRoomCreated(RoomPlacement hint)
+        /// <summary>
+        /// Requests a zoom-only reveal for a newly unlocked Room. Future GameFlow owns when this is
+        /// called and may continue only after <see cref="CameraRevealCompleted"/>.
+        /// </summary>
+        public void RequestRoomReveal(RoomPlacement room)
+        {
+            if (cameraZoom == null)
+            {
+                return;
+            }
+
+            cameraZoom.RequestRoomReveal(room.Bounds);
+        }
+
+        private void OnNextHintCreated(RoomPlacement hint)
         {
             if (roomGeneration == null || cameraZoom == null || cameraPan == null)
             {
@@ -55,19 +81,22 @@ namespace Octoplug.CameraFraming.Unity
 
             var unlockedBounds = CollectRoomBounds(roomGeneration.State.UnlockedLayout);
 
-            // Zoom's dynamic maximum zoom-out is deliberately unchanged: it still reflects only the
-            // already-unlocked house, per the existing Hint-framing policy (a brand-new hint widens
-            // the effective zoom range itself when needed; see HouseCameraZoomController).
+            // Zoom's dynamic maximum remains based on already-unlocked rooms. A new Hint may widen
+            // the effective range itself when full-bounds framing requires more zoom-out.
             var unlockedHouseBounds = DynamicZoomLimit.CombineBounds(unlockedBounds);
             cameraZoom.RecomputeDynamicMaxOrthographicSize(unlockedHouseBounds);
 
-            // Pan boundary uses the "visible house" instead: unlocked rooms PLUS the current
-            // HintLocked room, so a Hint sitting just outside the unlocked footprint is still fully
-            // reachable by Pan, not just by the one-shot zoom-out framing below.
-            var visibleHouseBounds = DynamicZoomLimit.CombineBounds(AppendBounds(unlockedBounds, hint.Bounds));
+            // Pan uses the visible House: unlocked Rooms plus the current HintLocked Room.
+            var visibleHouseBounds = DynamicZoomLimit.CombineBounds(
+                AppendBounds(unlockedBounds, hint.Bounds));
             cameraPan.UpdateHouseBounds(visibleHouseBounds);
 
             cameraZoom.RequestHintFraming(hint.Bounds);
+        }
+
+        private void OnCameraRevealCompleted()
+        {
+            CameraRevealCompleted?.Invoke();
         }
 
         private static IReadOnlyList<RoomBounds2D> CollectRoomBounds(RoomLayout layout)
@@ -82,7 +111,9 @@ namespace Octoplug.CameraFraming.Unity
             return bounds;
         }
 
-        private static IReadOnlyList<RoomBounds2D> AppendBounds(IReadOnlyList<RoomBounds2D> bounds, RoomBounds2D extra)
+        private static IReadOnlyList<RoomBounds2D> AppendBounds(
+            IReadOnlyList<RoomBounds2D> bounds,
+            RoomBounds2D extra)
         {
             var combined = new RoomBounds2D[bounds.Count + 1];
             for (var i = 0; i < bounds.Count; i++)

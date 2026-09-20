@@ -80,7 +80,7 @@ LineRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Positions:
   - {x: -4, y: -3, z: 0}
@@ -641,6 +641,7 @@ GameObject:
   - component: {fileID: 4497938406176488588}
   - component: {fileID: 4191811173247893750}
   - component: {fileID: 3251820755612282760}
+  - component: {fileID: 1420650150178018093}
   m_Layer: 0
   m_Name: Room
   m_TagString: Untagged
@@ -661,8 +662,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 282526908043360340}
   - {fileID: 205453615383231201}
+  - {fileID: 282526908043360340}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!61 &4191811173247893750
@@ -724,6 +725,47 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Power.RoomArea
   floorArea: {fileID: 4191811173247893750}
+--- !u!114 &1420650150178018093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3697338115951191676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4f5d886abd3e4c4d90e472584b97b2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.RoomGeneration.Unity.RoomGenerationRoomBinder
+  floorCollider: {fileID: 4191811173247893750}
+  walls:
+  - side: 0
+    lockedLine: {fileID: 605403503015461998}
+    lockedCollider: {fileID: 5158937490808817938}
+    unlockedLine: {fileID: 9035703991268305880}
+    unlockedCollider: {fileID: 5442397650078686629}
+  - side: 1
+    lockedLine: {fileID: 2887808837478193566}
+    lockedCollider: {fileID: 3030037195240749681}
+    unlockedLine: {fileID: 1989070674486220290}
+    unlockedCollider: {fileID: 5195497281955009700}
+  - side: 2
+    lockedLine: {fileID: 6812029574343325955}
+    lockedCollider: {fileID: 8090510343036293385}
+    unlockedLine: {fileID: 104943779783698719}
+    unlockedCollider: {fileID: 3686190684476745809}
+  - side: 3
+    lockedLine: {fileID: 5904969455009919404}
+    lockedCollider: {fileID: 7267530159503704820}
+    unlockedLine: {fileID: 561181583866975329}
+    unlockedCollider: {fileID: 3062398674807797761}
+  lockedRoot: {fileID: 8222297901251257942}
+  unlockedRoot: {fileID: 8509377959423381779}
+  lockIcon: {fileID: 3285043106180532023}
+  hatchingRoot: {fileID: 0}
+  gameplayRoot: {fileID: 0}
+  doorTemplate: {fileID: 458336736636092118}
+  runtimeDoorRoot: {fileID: 5162733147142041656}
 --- !u!1 &4110385765402309390
 GameObject:
   m_ObjectHideFlags: 0
@@ -994,7 +1036,7 @@ LineRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Positions:
   - {x: -4, y: -3, z: 0}
@@ -1215,7 +1257,7 @@ LineRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Positions:
   - {x: 4, y: -3, z: 0}
@@ -1593,7 +1635,7 @@ LineRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Positions:
   - {x: -4, y: 3, z: 0}
@@ -1906,7 +1948,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &205453615383231201
 Transform:
   m_ObjectHideFlags: 0

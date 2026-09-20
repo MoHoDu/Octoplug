@@ -28,5 +28,20 @@ namespace Octoplug.Power
                 return floorArea;
             }
         }
+
+        public bool IsGameplayEnabled { get; private set; } = true;
+
+        /// <summary>
+        /// Enables or excludes this room from floor interaction and authoritative grid population.
+        /// </summary>
+        public void SetGameplayEnabled(bool enabled)
+        {
+            IsGameplayEnabled = enabled;
+            var area = FloorArea;
+            if (area != null)
+            {
+                area.enabled = enabled;
+            }
+        }
     }
 }

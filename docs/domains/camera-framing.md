@@ -21,7 +21,7 @@ Current rules:
 
 ## Unity Integration
 
-The verified integration exists only in the isolated copied scene `Assets/00_Scenes/Demo/RoomGenerationTest.unity`; production `InfiniteMode.unity` is untouched.
+The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode.unity`. The isolated `RoomGenerationTest.unity` scene remains reference-only and is not a production copy target.
 
 ### Zoom and Hint framing
 
@@ -32,9 +32,8 @@ The verified integration exists only in the isolated copied scene `Assets/00_Sce
 ### Pan ownership and movement
 
 - `CameraPanInputReader.Awake()` corrects Unity's Editor Play Mode default (`InputSystem.settings.editorInputBehaviorInPlayMode`), which otherwise gates pointer button state behind Game View OS focus while mouse-wheel scroll bypasses that gate — the exact reason empty-world Mouse Drag could silently do nothing while Zoom still worked in the same session. The override is applied in memory only, guarded by `#if UNITY_EDITOR`, writes no `ProjectSettings` asset, and has no effect in a build.
-- `CameraPanInteractionResolver` decides only whether a Pointer Down position is reserved by a higher-priority interaction. It checks UI first, then explicit world semantics: Plug, Socket/PowerStrip, Product (`ApplianceSource`), and `CameraPanBlocker`.
+- `CameraPanInteractionResolver` adapts Camera Pan to the authoritative production `PointerInteractionResolver`. It requests Empty World capture only on Pointer Down; the production resolver applies UI, Plug, Product, Socket, eligible PowerStrip Head, and explicit-blocker priority.
 - Broad Room floor/wall/door colliders do not block empty-world Pan.
-- Authored PowerStrip body regions without Collider2D coverage use a renderer-bounds fallback beneath `PowerStrip`; nested Cable renderers are excluded. This avoids object-name hardcoding and prefab modification.
 - `CameraPanInputReader` separately owns Mouse and single-touch Pan input. It reads `panSensitivity` live, latches Down ownership until Up, suppresses emulated Mouse while touch is active, and yields completely to pinch during multitouch.
 - `HouseCameraPanController` moves only the `CinemachineCamera` transform. It applies the latest cached "visible house" bounds (see below), the **current** Lens size, the **current** output aspect, and `panBoundaryMargin` — recomputed fresh on every single Pan request, never cached as a fixed world-space range. Zoom In/Out therefore widens/narrows the reachable range immediately, with no Room Generation event required. Main Camera is never arbitrarily transformed.
 - Boundary clamping occurs only when Pan is requested; Zoom, aspect change, House growth, and Hint framing do not themselves recenter or move the Camera.
@@ -42,7 +41,8 @@ The verified integration exists only in the isolated copied scene `Assets/00_Sce
 ### Room Generation bridge
 
 - `RoomGenerationCameraFramingBridge` is the sole Room Generation → Camera connection.
-- On `RoomGenerationTestController.HintRoomCreated`, it computes two distinct bounds from the same unlocked Room list: the **unlocked-only** house bounds (fed to `RecomputeDynamicMaxOrthographicSize`, unchanged from Zoom's established policy) and a **visible-house** bounds — unlocked Rooms plus the current Hint's bounds (fed to `cameraPan.UpdateHouseBounds`) — so Pan can always reach a Hint sitting just outside the unlocked footprint, not only the confirmed/unlocked Rooms. It then requests unchanged full-bounds Hint framing.
+- On `ProductionRoomGenerationController.NextHintCreated`, it computes two distinct bounds from the same unlocked Room list: the **unlocked-only** house bounds (fed to `RecomputeDynamicMaxOrthographicSize`) and **visible-house** bounds — unlocked Rooms plus the current Hint's bounds (fed to `cameraPan.UpdateHouseBounds`). It then requests unchanged full-bounds Hint framing.
+- Future GameFlow may call `RequestRoomReveal(RoomPlacement)` after Room content is ready. The bridge forwards the zoom-only request and emits `CameraRevealCompleted` only after the smoothed target is reached (or immediately when no zoom-out is needed).
 - Room Generation remains unaware of Camera, Cinemachine, Zoom, or Pan.
 
 ## Verification Evidence
@@ -57,7 +57,7 @@ The verified integration exists only in the isolated copied scene `Assets/00_Sce
 
 ## Design Direction
 
-The concept document does not define production Camera behavior. The current implementation supports the copied Room Generation validation scene and the user's explicit Zoom/Hint/Pan decisions. Transfer into Infinite Mode, cinematic behavior, and session-level Camera ownership remain deferred.
+The concept document does not define detailed Camera feel. Production `InfiniteMode.unity` now owns the verified Zoom/Hint/Pan adapters and an external Room Reveal completion boundary. Future GameFlow orchestration and cinematic behavior remain deferred.
 
 ### Camera Reveal (confirmed 2026-09-20)
 
@@ -76,9 +76,9 @@ See: `docs/decisions/infinity-progression-and-reward-loop.md` section 7 and 8.
 
 ## Related Domains
 
-- [Room Generation](room-generation.md) supplies `HintRoomCreated` and actual `RoomLayout`/`RoomPlacement` bounds.
-- Infinite Mode will eventually own production Camera integration; this domain currently does not modify `InfiniteMode.unity`.
-- `Octoplug.Power.Input.PointerInteractionResolver` (Connection/Power domain, introduced in `TASK-20260918-007`, currently active) is a **separate, independent pointer-ownership system** from `CameraPanInteractionResolver` — a static, frame-scoped capture-and-latch resolver with its own priority (Plug → UI → Socket → PowerStrip Head → Product → empty) that `PlugDragInput` itself now registers/captures/releases against. It is not aware of `CameraPanInteractionResolver`, and vice versa. Production Integration must merge these into one authoritative pointer-ownership structure; until then, do not assume `CameraPanInteractionResolver`'s classification of Plug/Socket/PowerStrip Head/Product agrees with production's actual interaction priority.
+- [Room Generation](room-generation.md) supplies `NextHintCreated` and actual `RoomLayout`/`RoomPlacement` bounds.
+- Infinite Mode owns the production Camera hierarchy and fresh component/reference wiring.
+- `Octoplug.Power.Input.PointerInteractionResolver` is the sole production pointer-ownership authority. `CameraPanInteractionResolver` is only its screen-to-world adapter for Empty World capture.
 
 ## Modification Cautions
 
@@ -101,8 +101,6 @@ See: `docs/decisions/infinity-progression-and-reward-loop.md` section 7 and 8.
 
 ## Open Decisions
 
-- **Production Integration Preflight must be re-run** against the then-current `feat/infinity-power-connection` once `TASK-20260918-007` (currently active, actively changing pointer-interaction structure) is committed/pushed and merged into it. A Preflight taken before that lands does not reflect the real merge target.
-- **`Assets/00_Scenes/Demo/RoomGenerationTest.unity` is not a production copy target.** Only the pure core (`Assets/01_Scripts/CameraFraming/`), the Unity adapter/controller pattern (`CameraZoomInputReader`, `CameraPanInputReader`, `CameraPanInteractionResolver`, `HouseCameraZoomController`, `HouseCameraPanController`, `RoomGenerationCameraFramingBridge`), and the pure test suites carry forward. Production integration means wiring these fresh against `InfiniteMode.unity`'s actual Camera/scene structure at that time (which has not been inspected for this purpose and will have moved since this Task), not copying the scene.
-- Production transfer into `InfiniteMode.unity` and production Camera ownership.
-- Any automatic Camera relocation; current Hint behavior remains zoom-only after manual Pan.
-- Cinematic/session-level framing beyond the copied validation scene.
+- **`Assets/00_Scenes/Demo/RoomGenerationTest.unity` is not a production copy target.** Production integration is wired fresh against `InfiniteMode.unity`; retain the test scene only as historical verification reference.
+- Any automatic Camera relocation; Hint framing and Room Reveal remain zoom-only after manual Pan.
+- Cinematic/session-level framing beyond the external Room Reveal request/completion boundary.

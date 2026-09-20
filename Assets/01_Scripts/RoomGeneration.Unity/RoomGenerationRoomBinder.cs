@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Octoplug.Power;
 using Octoplug.RoomGeneration;
 using UnityEngine;
 
@@ -49,6 +50,7 @@ namespace Octoplug.RoomGeneration.Unity
         private Vector2 floorSizeDelta;
         private bool initialized;
         private bool hatchingWarningIssued;
+        private RoomArea roomArea;
 
         public RoomId RoomId { get; private set; }
         public RoomBounds2D Bounds { get; private set; }
@@ -123,6 +125,12 @@ namespace Octoplug.RoomGeneration.Unity
             if (floorCollider == null)
             {
                 error = "Floor collider is not assigned.";
+                return false;
+            }
+
+            if (GetComponent<RoomArea>() == null)
+            {
+                error = $"A {nameof(RoomArea)} component is required on the room root.";
                 return false;
             }
 
@@ -323,7 +331,14 @@ namespace Octoplug.RoomGeneration.Unity
                 if (runtimeDoors[i] != null)
                 {
                     runtimeDoors[i].gameObject.SetActive(false);
-                    Destroy(runtimeDoors[i].gameObject);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(runtimeDoors[i].gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(runtimeDoors[i].gameObject);
+                    }
                 }
             }
 
@@ -355,6 +370,7 @@ namespace Octoplug.RoomGeneration.Unity
             lockedRoot.SetActive(locked);
             unlockedRoot.SetActive(!locked);
             lockIcon.SetActive(intent.ShowLockIcon);
+            roomArea.SetGameplayEnabled(intent.GameplayContentEnabled);
             if (gameplayRoot != null)
             {
                 gameplayRoot.SetActive(intent.GameplayContentEnabled);
@@ -381,6 +397,12 @@ namespace Octoplug.RoomGeneration.Unity
             if (!TryValidate(out var error))
             {
                 throw new InvalidOperationException($"{nameof(RoomGenerationRoomBinder)} on '{name}' is invalid: {error}");
+            }
+
+            roomArea = GetComponent<RoomArea>();
+            if (roomArea == null)
+            {
+                throw new InvalidOperationException($"{nameof(RoomGenerationRoomBinder)} on '{name}' requires a {nameof(RoomArea)} component.");
             }
 
             wallsBySide.Clear();
