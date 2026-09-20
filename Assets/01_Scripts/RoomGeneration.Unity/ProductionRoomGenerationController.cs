@@ -96,6 +96,18 @@ namespace Octoplug.RoomGeneration.Unity
             PlanStoreAndRenderNextHint();
         }
 
+        [ContextMenu("Debug/Promote Current Hint")]
+        private void PromoteCurrentHintFromInspector()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("Room hints can be promoted only in Play Mode.", this);
+                return;
+            }
+
+            PromoteCurrentHint();
+        }
+
         /// <summary>
         /// Promotes the exact stored hint. Progression/GameFlow decides when to call this method.
         /// </summary>

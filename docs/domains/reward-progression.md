@@ -39,11 +39,19 @@ The following phrases from older documents no longer reflect the authoritative d
 
 ---
 
-## Existing Evidence
+## Established Runtime Boundary
 
-The concept document and `docs/decisions/infinity-progression-and-reward-loop.md` are
-the only stable sources for this domain. No dedicated progression prefab, custom C#,
-balance data, persistence implementation, or automated tests exist.
+- `SessionProgressState` is the authoritative pure state for Global Satisfaction (`0..100`), current EXP, RoomCount-specific Required EXP, and one-shot depletion/threshold signals.
+- Infinite Mode starts with Global Satisfaction `100`.
+- Success applies the resolved Demand row's exact positive Satisfaction delta and `ExpReward`; failure applies its exact negative Satisfaction delta and grants no EXP.
+- `SessionProgressConfig.asset` supplies explicit RoomCount→RequiredEXP entries. The temporary Human Verification table is Room 1=`20`, Room 2=`30`, continuing in increments of 10 through Room 15=`160`.
+- These entries are temporary balance data, not a runtime formula. The final scaling formula remains an Open Decision.
+- `RequiredExperienceImporter` defines the future Sheet-editable schema as `RoomCount` and `RequiredEXP`; no runtime Google Sheet transport exists.
+- `SessionProgressController` consumes `ResidentDemandController.DemandResolved`, while `SessionProgressHudCoordinator` presents state through the existing `GameStatusInfo` sliders.
+- Satisfaction below 30 uses `#FF0032`; 30 and above restores the authored green. EXP preserves the authored orange fill.
+- Threshold acknowledgement/reset is an explicit API reserved for future GameFlow. Reaching a threshold does not currently generate a Room or Resident, reveal Camera, pause, delay, or open Rewards.
+
+Persistence, Reward catalogs/application, Target Selection, and final Game Over presentation are not established.
 
 ---
 
@@ -93,5 +101,6 @@ scaling formula, and infinite scaling are **Open Decisions** pending balance tun
 
 ## Planned, Not Established
 
-Economy data, reward catalogs, upgrade application, Target Selection system, save data,
-analytics, and automated tests are not established.
+Reward catalogs, upgrade application, Target Selection, GameFlow orchestration, save data,
+and analytics are not established. Progression core and HUD binding have automated tests;
+full player-facing flow still requires Human Verification.

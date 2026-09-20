@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56d3ff4513fb7b24cba9c60dd5e6ad0f, type: 3}
+  m_Name: SessionProgressConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.ResidentDemand.Unity.SessionProgressConfig
+  initialGlobalSatisfaction: 100
+  requiredExperience:
+  - roomCount: 1
+    requiredExperience: 20
+  - roomCount: 2
+    requiredExperience: 30
+  - roomCount: 3
+    requiredExperience: 40
+  - roomCount: 4
+    requiredExperience: 50
+  - roomCount: 5
+    requiredExperience: 60
+  - roomCount: 6
+    requiredExperience: 70
+  - roomCount: 7
+    requiredExperience: 80
+  - roomCount: 8
+    requiredExperience: 90
+  - roomCount: 9
+    requiredExperience: 100
+  - roomCount: 10
+    requiredExperience: 110
+  - roomCount: 11
+    requiredExperience: 120
+  - roomCount: 12
+    requiredExperience: 130
+  - roomCount: 13
+    requiredExperience: 140
+  - roomCount: 14
+    requiredExperience: 150
+  - roomCount: 15
+    requiredExperience: 160

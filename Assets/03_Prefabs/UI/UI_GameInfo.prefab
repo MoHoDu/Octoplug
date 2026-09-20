@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6317338395939721765}
+  - component: {fileID: 9199023142921351809}
   m_Layer: 5
   m_Name: UI_GameInfo
   m_TagString: Untagged
@@ -37,6 +38,20 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -30}
   m_SizeDelta: {x: 1000, y: 150}
   m_Pivot: {x: 0.5, y: 1}
+--- !u!114 &9199023142921351809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7358004860626009152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a2a054288069e24987b9323866c2832, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.ResidentDemand.Unity.SessionProgressHudCoordinator
+  controller: {fileID: 0}
+  view: {fileID: 7561813736490420308}
 --- !u!1001 &3176165888923624305
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -863,6 +878,14 @@ PrefabInstance:
       propertyPath: m_RaycastTarget
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5502589947773346222, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+      propertyPath: m_Interactable
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6590161334364901346, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+      propertyPath: m_Interactable
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7233163510989493267, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
       propertyPath: m_RaycastTarget
       value: 0
@@ -898,8 +921,64 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7424908105530695575, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7561813736490420308}
   m_SourcePrefab: {fileID: 100100000, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+--- !u!114 &2112223518404812107 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7233163510989493267, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+  m_PrefabInstance: {fileID: 8732897469314500952}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!1 &2178591511849293519 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7424908105530695575, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+  m_PrefabInstance: {fileID: 8732897469314500952}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7561813736490420308
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2178591511849293519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6afdbb7874e92f46acedf90681ae144, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.ResidentDemand.Unity.GameStatusInfoView
+  satisfactionSlider: {fileID: 2469537389776963258}
+  satisfactionFill: {fileID: 2112223518404812107}
+  experienceSlider: {fileID: 3849552515453184246}
+--- !u!114 &2469537389776963258 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6590161334364901346, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+  m_PrefabInstance: {fileID: 8732897469314500952}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
+--- !u!114 &3849552515453184246 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5502589947773346222, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+  m_PrefabInstance: {fileID: 8732897469314500952}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
 --- !u!224 &9047620385923838376 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 341958249206298864, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}

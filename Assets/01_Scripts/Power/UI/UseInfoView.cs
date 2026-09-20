@@ -1,105 +1,145 @@
 using System.Collections.Generic;
+using Octoplug.ResidentDemand.Unity;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Octoplug.Power.UI
 {
     /// <summary>
-    /// Drives the existing `UseInfo` prefab instance nested under each
-    /// Product: active/waiting resident counts as person icons, hidden
-    /// entirely at zero. No real Resident system exists yet — the
-    /// Inspector-only preview fields below are a stand-in, mirroring
-    /// <see cref="Octoplug.Power.Cable.CablePowerFlowEffect.previewPowered"/>'s
-    /// precedent, and must never be read as a game rule.
+    /// Renders an authoritative Product usage snapshot with only the person
+    /// icons already authored in the shared UseInfo prefab.
     /// </summary>
     public class UseInfoView : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("Existing active-user icon template ('Using_Person').")]
-        private Image activeIconTemplate;
+        [Tooltip("Common parent whose direct Image children form the authored icon pool in sibling order.")]
+        private Transform iconPoolParent;
 
         [SerializeField]
-        [Tooltip("Existing waiting-user icon template ('Icon').")]
-        private Image waitingIconTemplate;
+        [FormerlySerializedAs("activeIconTemplate")]
+        [Tooltip("Authored reference whose color represents an active user.")]
+        private Image activeColorReference;
 
         [SerializeField]
-        [Tooltip("Preview-only test values — NOT a real Resident system. Do not treat as a game rule.")]
-        private int previewActiveUsers;
+        [FormerlySerializedAs("waitingIconTemplate")]
+        [Tooltip("Authored reference whose color represents a waiting user.")]
+        private Image waitingColorReference;
 
-        [SerializeField]
-        [Tooltip("Preview-only test values — NOT a real Resident system. Do not treat as a game rule.")]
-        private int previewWaitingUsers;
+        private readonly List<Image> icons = new();
+        private Color _activeColor;
+        private Color _waitingColor;
+        private bool _overflowReported;
+        private bool _initialized;
 
-        private readonly List<Image> activeIcons = new();
-        private readonly List<Image> waitingIcons = new();
-
-        private void Start()
+        public static UseInfoView FindFor(ApplianceSource product)
         {
-            // The authored prefab has two same-named siblings per role
-            // ('Using_Person' x2, 'Icon' x2) — a Find/single-reference would
-            // only ever see one of each and leave its sibling as an
-            // untracked orphan, so the initial pool is built from every
-            // same-named sibling under the template's own parent instead.
-            CollectSameNameSiblings(activeIconTemplate, activeIcons);
-            CollectSameNameSiblings(waitingIconTemplate, waitingIcons);
-
-            SetCounts(previewActiveUsers, previewWaitingUsers);
+            return product == null
+                ? null
+                : product.GetComponentInChildren<UseInfoView>(true);
         }
 
-        private static void CollectSameNameSiblings(Image template, List<Image> pool)
+        public void Bind(ProductUsageSnapshot snapshot)
         {
-            if (template == null)
+            if (snapshot == null)
+            {
+                throw new System.ArgumentNullException(nameof(snapshot));
+            }
+
+            EnsureInitialized();
+            var available =
+                snapshot.Product.IsConnected &&
+                snapshot.Product.IsPowered;
+            var active = available ? snapshot.ActiveResidents.Count : 0;
+            var waiting = available ? snapshot.WaitingResidents.Count : 0;
+            ApplyCounts(active, waiting);
+            gameObject.SetActive(available && active + waiting > 0);
+        }
+
+        public void Hide()
+        {
+            EnsureInitialized();
+            ApplyCounts(0, 0);
+            gameObject.SetActive(false);
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_initialized)
             {
                 return;
             }
 
-            foreach (Transform child in template.transform.parent)
+            icons.Clear();
+            var poolParent = iconPoolParent;
+            if (poolParent == null && activeColorReference != null)
             {
-                if (child.name != template.name)
-                {
-                    continue;
-                }
+                poolParent = activeColorReference.transform.parent;
+            }
 
-                var image = child.GetComponent<Image>();
-                if (image != null)
+            if (poolParent == null && waitingColorReference != null)
+            {
+                poolParent = waitingColorReference.transform.parent;
+            }
+
+            if (poolParent != null)
+            {
+                foreach (Transform child in poolParent)
                 {
-                    pool.Add(image);
+                    var image = child.GetComponent<Image>();
+                    if (image != null)
+                    {
+                        icons.Add(image);
+                    }
                 }
             }
+
+            if (activeColorReference != null)
+            {
+                _activeColor = activeColorReference.color;
+            }
+
+            if (waitingColorReference != null)
+            {
+                _waitingColor = waitingColorReference.color;
+            }
+
+            _initialized = true;
         }
 
-        /// <summary>Redraws for the given counts; hides the whole view when both are zero. Called by a future Resident system — safe to call any time.</summary>
-        public void SetCounts(int active, int waiting)
+        private void ApplyCounts(int active, int waiting)
         {
             active = Mathf.Max(0, active);
             waiting = Mathf.Max(0, waiting);
+            var visibleCount = Mathf.Min(icons.Count, active + waiting);
+            var visibleActiveCount = Mathf.Min(icons.Count, active);
 
-            gameObject.SetActive(active + waiting > 0);
-            if (active + waiting == 0)
+            for (var index = 0; index < icons.Count; index++)
+            {
+                var icon = icons[index];
+                icon.gameObject.SetActive(index < visibleCount);
+                if (index < visibleActiveCount)
+                {
+                    icon.color = _activeColor;
+                }
+                else if (index < visibleCount)
+                {
+                    icon.color = _waitingColor;
+                }
+            }
+
+            if (active + waiting <= icons.Count || _overflowReported)
             {
                 return;
             }
 
-            ApplyCount(activeIcons, activeIconTemplate, active);
-            ApplyCount(waitingIcons, waitingIconTemplate, waiting);
-        }
-
-        private void ApplyCount(List<Image> pool, Image template, int count)
-        {
-            if (template == null)
-            {
-                return;
-            }
-
-            while (pool.Count < count)
-            {
-                pool.Add(Instantiate(template, template.transform.parent));
-            }
-
-            for (var i = 0; i < pool.Count; i++)
-            {
-                pool[i].gameObject.SetActive(i < count);
-            }
+            Debug.LogWarning(
+                $"UseInfo authored icon pool has {icons.Count} slots, " +
+                $"but the authoritative snapshot requires {active + waiting} " +
+                $"({active} active, {waiting} waiting). " +
+                "The display is clamped with active residents taking priority; no icons were created.",
+                this);
+            _overflowReported = true;
         }
     }
 }

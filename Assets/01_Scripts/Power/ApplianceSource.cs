@@ -50,11 +50,20 @@ namespace Octoplug.Power
         public UsageType UsageTypes => usageTypes;
         public int Capacity => capacity;
         public float SatisfactionDurationSeconds => satisfactionDurationSeconds;
+        public bool IsConnected => cable != null && cable.Plug != null && cable.Plug.IsConnected;
+
+        public event System.Action<ApplianceSource, bool> PoweredChanged;
 
         /// <summary>Set by the power-validation flow only; see <see cref="IsPowered"/>.</summary>
         public void SetPowered(bool powered)
         {
+            if (IsPowered == powered)
+            {
+                return;
+            }
+
             IsPowered = powered;
+            PoweredChanged?.Invoke(this, powered);
         }
     }
 }
