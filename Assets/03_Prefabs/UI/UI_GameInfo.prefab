@@ -859,6 +859,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4528882427963534184, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7233163510989493267, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7311535603189666925, guid: fe27d0488a7ee7246b6424a051f66bcd, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

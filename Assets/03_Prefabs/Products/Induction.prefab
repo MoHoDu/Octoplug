@@ -376,6 +376,7 @@ MonoBehaviour:
   boundsCollider: {fileID: 369312425852906355}
   boundsRenderer: {fileID: 0}
   fallbackSize: {x: 1, y: 1}
+  powerStripLayout: {fileID: 0}
 --- !u!1001 &2401550798113809928
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -464,10 +465,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6397338230932288710, guid: 9e5d820ca61affb4081393d27d1b5339, type: 3}
-      propertyPath: m_SortingOrder
-      value: 100
-      objectReference: {fileID: 0}
     - target: {fileID: 8391551153167114312, guid: 9e5d820ca61affb4081393d27d1b5339, type: 3}
       propertyPath: m_Name
       value: UseInfo
@@ -541,10 +538,6 @@ PrefabInstance:
     - target: {fileID: 3242712882543001716, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5935678537027234976, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
-      propertyPath: m_SortingOrder
-      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 5966427273646722907, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_AnchorMax.y
@@ -636,7 +629,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8721103015401115364, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 40
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 8721103015401115364, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_SizeDelta.y
@@ -672,7 +665,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8721103015401115364, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 8721103015401115364, guid: 53ca5255876d38e4cb95d3c64fc7ee96, type: 3}
       propertyPath: m_AnchoredPosition.y
