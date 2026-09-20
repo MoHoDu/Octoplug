@@ -2,30 +2,31 @@
 
 ## Status
 
-- Current stage: planning / merge preflight
-- Last completed action: TASK-007 was merged through `feat/infinity-power-connection` into `dev`; this new Task was created from the updated `dev` baseline.
-- Next action: audit and merge the committed `feat/infinity-room-generation-core` tip into the new task branch, then plan production integration against current assets.
+- Current stage: merged, code compatibility complete, Unity verification blocked.
+- Merge source: committed `origin/feat/infinity-room-generation-core` at `a34e0f1ee1ba94e89bb4465b61b31a643b5fe847`.
+- Correct merge-base: `ca3a87f811bc61d2b108a44ac6ab10137e1c93a6`; actual-base preflight found no direct changed-file overlap or textual conflicts.
+- Next action: open a matching TASK-008 Unity Editor/Pipeline, run compile plus official Room Generation, Camera, and Production Power regressions, then commit/push only if successful.
 
-## Changed Files
+## Integration Result
 
-- Task scaffold only: `tasks/active/TASK-20260920-008-room-generation-integration/**`.
+- Automatic `--no-commit --no-ff` merge is active and uncommitted.
+- Production `InfiniteMode.unity`, production `Room.prefab`, and `.vscode/settings.json` remain at TASK-008 versions.
+- Camera Pan now requests empty-world capture from production `PointerInteractionResolver`; the duplicate UI/physics priority resolver was removed.
+- Explicit Pan blockers register collider ownership with the production resolver; multitouch and disable paths release Pan capture.
+- Room Generation remains planning/state code and introduces no second production gameplay grid or legacy variable-prefab selector.
+- Package result adds Cinemachine 3.1.7 while retaining Input System 1.18.0, Pipeline 0.7.0-exp.1, and URP 17.3.0.
 
 ## Verification
 
-- Not run for TASK-008.
-- TASK-007's prior verification remains recorded in its completed handoff; this Task must independently verify the combined result.
+- Room Generation Core: PASS, 66/66.
+- Camera Framing Core: PASS, 46/46.
+- `verify-fast.ps1`: PASS; explicitly not Unity/game coverage.
+- `verify-task-context.ps1`: WARN, not `COMPACT_REQUIRED` (TASK-008 default context 131 lines).
+- `git diff --check`: no whitespace errors; CRLF conversion warnings only.
+- Unity compile/tests and Production Power regressions: NOT RUN; no matching TASK-008 Editor/Pipeline and no generated `.slnx`.
+- Console delta: UNRELIABLE for the same environment reason.
+- Overall: verification incomplete; do not commit/push, merge to `dev`, or mark DONE yet.
 
-## Decisions and Blockers
+## Deferred Production Integration
 
-- Human Decisions: committed Room Generation branch only; preserve and exclude all dirty worktree changes; reuse the existing production Cable Routing Grid; re-wire patterns fresh rather than copying test YAML.
-- Open Decisions: production Room/candidate/door policy details, no-successor behavior, exact merge conflict resolutions, and whether dirty Room Generation worktree changes are later incorporated.
-
-## Exclusive Assets
-
-- Initial merge inputs are declared in `meta.md`.
-- Production `InfiniteMode.unity`, `Room.prefab`, Grid integration surfaces, and package files require explicit confirmation before mutation.
-- Saved/clean state: the new task scaffold is uncommitted in the temporary clean dev-integration worktree. Existing TASK-007, primary power, and Room Generation worktrees remain dirty and untouched.
-
-## Resume Context
-
-Read `meta.md`, `plan.md`, `todo.md`, this handoff, `docs/domains/room-generation.md`, and the current planning/integration skill. Read completed Room Generation/Camera handoffs as targeted references; do not load their logs by default.
+Production wiring remains deferred: production `Room.prefab`, Room Generation Controller, `RoomPlan → CableRoutingGrid`, Door application, unified Wall Outlet + `ActiveSocketCount`, grid rebuild, Cinemachine/Camera bridge, Hint visuals, debug trigger, and `InfiniteMode` Human Verification.

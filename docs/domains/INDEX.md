@@ -9,6 +9,7 @@ Read only the domain relevant to the current task. Domain Maps describe evidence
 | Connection / Power | [connection-power.md](connection-power.md) | Cable, multitap, outlet, product, power UI prefabs |
 | Resident / Demand | [resident-demand.md](resident-demand.md) | Resident card and Infinite Mode UI roots |
 | Room Generation | [room-generation.md](room-generation.md) | Room prefab and Infinite Mode room hierarchy |
+| Camera Framing | [camera-framing.md](camera-framing.md) | Cinemachine zoom, empty-world Pan, and hint-room framing on the copied Room Generation test scene |
 | Reward / Progression | [reward-progression.md](reward-progression.md) | Concept document only; implementation not established |
 | Infinite Mode | [infinite-mode.md](infinite-mode.md) | Main demo scene and cross-domain integration roots |
 

@@ -2,71 +2,40 @@
 
 - **ID:** TASK-20260920-008
 - **Title:** Room Generation Core Integration
-- **Status:** proposed
+- **Status:** active
 - **Owner:** MoHoDu
 - **Agent:** Claude Code
 - **Domain:** Room Generation / Camera Framing / Connection Grid
 - **Base:** dev
 - **Branch:** task/TASK-20260920-008-room-generation-integration
-- **Started:** 2026-09-20
-- **Updated:** 2026-09-20
-- **Current Stage:** planning
-- **Current Skill:** plan-task
+- **Started / Updated:** 2026-09-20
+- **Current Stage:** merge and code compatibility
+- **Current Skill:** implement-code
 
-## Context
+## Current Phase Scope
 
-`TASK-20260918-007` and `feat/infinity-power-connection` are merged into `dev`. The next task will integrate the committed `feat/infinity-room-generation-core` work against that current production baseline. The room-generation branch also has an existing dirty worktree; those uncommitted changes are preserved and are not part of the initial merge input.
+- Use only committed `origin/feat/infinity-room-generation-core` history as the merge source; preserve all dirty worktrees.
+- Preflight with current remote refs, merge-base, changed-file overlap, and non-mutating `git merge-tree`.
+- Merge into TASK-008 only and apply minimal code-level compatibility fixes.
+- Keep production `PointerInteractionResolver` authoritative; Camera Pan must not remain an independent ownership/priority system.
+- Keep the existing Power/Cable grid authoritative; Room Generation pure models may remain but must not introduce a second gameplay grid.
+- Preserve single persistent Multitap and Wall Outlet prefabs with `ActiveSocketCount` and current Power behavior.
+- Preserve Room Generation and Camera Framing behavior and run required regression checks.
+- If successful, commit and push TASK-008. Do not merge to `dev` or mark DONE.
 
-## Allowed Scope
+## Forbidden This Phase
 
-- Preflight and merge the committed `feat/infinity-room-generation-core` history into this task branch.
-- Resolve conflicts against the current `dev` production Power/Grid/UI implementation without dropping either branch's intended behavior.
-- Integrate the pure `Assets/01_Scripts/RoomGeneration/` and `Assets/01_Scripts/CameraFraming/` cores and their tests.
-- Recreate the verified Room Generation binder/controller and Camera Framing patterns against the current production `Room.prefab` and `InfiniteMode.unity`; do not copy validation-scene YAML into production.
-- Connect generated Room/Wall/Door topology to the existing `CableRoutingGrid`/`GridPathfinder` and `CableRoutingGridService`; do not introduce a second production grid.
-- Update Room Generation, Camera Framing, and affected Connection/Grid domain documentation and focused verification.
+- No mutation of `InfiniteMode.unity`, production `Room.prefab`, production UI layout, `GameManager`, `UI_RoomInfo`, `GameStatusInfo`, Resident Demand, Satisfaction/EXP, Reward System, or production grid wiring.
+- Do not copy `RoomGenerationTest.unity` into production.
+- Do not incorporate, discard, stash, or reset uncommitted changes from any pre-existing worktree.
+- Do not reintroduce legacy Wall Outlet/Multitap prefab selection or alter package versions unnecessarily.
 
-## Do Not Modify
+## Deferred Production Integration
 
-- Do not include or discard uncommitted changes from the existing `feat/infinity-room-generation-core` worktree or any other dirty worktree.
-- Do not replace production assets with `RoomGenerationTest.unity` or `Room_RoomGenTest.prefab`; they remain validation/reference assets.
-- Do not redesign PowerStrip, Wall Outlet, Plug/Socket, Cable routing, power validation, or authored UI behavior established by TASK-007.
-- Do not implement Reward System, EXP/Level logic, resident spawning, persistence, production upgrade UI, or locked-room hatching art.
-- Do not choose unresolved player-facing generation/balance/UX values without the Human Decision Gate.
-- Do not stage, commit, push, or delete legacy branches/worktrees without explicit authorization.
+Production Room prefab adaptation, controller/wiring, `RoomPlan → CableRoutingGrid`, dynamic Doors, unified Wall Outlet placement, grid rebuild, pointer-to-Pan scene integration, Cinemachine scene setup, framing bridge, Hint visuals, debug trigger, and `InfiniteMode` Human Verification remain for a later phase.
 
-## AI Setup Allowed
+## Human Decisions / Open Decisions
 
-- Additive production C# adapters/components required to connect the established Room Generation and Camera Framing cores to current production systems.
-- Focused automated test fixtures and temporary runtime verification objects that do not persist in production scenes.
-- Unity Editor wiring only after Exclusive Assets are confirmed and through the exact task worktree Editor.
-
-## Exclusive Assets
-
-- Initial merge/preflight: committed files changed by `feat/infinity-room-generation-core`, including `.gitattributes`, package manifests, Room Generation/Camera Framing scripts and tests, isolated validation assets, domain maps, and historical task documents.
-- Production integration requires explicit confirmation before mutation of:
-  - `Assets/00_Scenes/Demo/InfiniteMode.unity`
-  - `Assets/03_Prefabs/Rooms/Room.prefab`
-  - existing `Assets/01_Scripts/Power/Grid/**` integration surfaces
-  - `Packages/manifest.json` and `Packages/packages-lock.json`
-- Dirty files in pre-existing worktrees are not owned by this Task.
-
-## Human Decisions
-
-- The committed Room Generation branch is the integration source; its uncommitted worktree changes remain preserved and excluded unless separately authorized.
-- Room Generation must reuse the existing production Cable Routing Grid rather than create a parallel production grid.
-- Production integration must re-wire verified patterns against current assets instead of copying the isolated test scene/prefab.
-
-## Open Decisions
-
-- Production Room bounds source/order and candidate ordering after inspecting current `InfiniteMode` structure.
-- Production Door dimensions/policy ownership and coordinate tolerance.
-- No-successor behavior and progression/session orchestration boundary.
-- Exact conflict resolutions for shared `.vscode/settings.json`, package files, task IDs/documents, `docs/domains/INDEX.md`, and any overlapping production scene/prefab content.
-- Whether preserved uncommitted changes in the Room Generation worktree should later be incorporated as a separate reviewed commit.
-
-## Verification State
-
-- Not started.
-- Required baseline: branch/merge ancestry audit, focused pure test suites, Unity compile, project tests where available, runtime Room/Hint/Door/Grid/Camera regression, Console delta, `verify-fast`, `git diff --check`, and Human Play verification for player-facing behavior.
-- Verification: HUMAN_VERIFY_REQUIRED
+- Confirmed: committed remote branch only; existing grid is authoritative; Game Flow requests unlocks while Room Generation only creates/promotes on request.
+- Open for production phase: Room bounds/candidate order, Door policy/tolerance, no-successor behavior, visual/layout details, and exact scene/prefab wiring.
+- Verification remains `HUMAN_VERIFY_REQUIRED`; this phase cannot complete the Task.
