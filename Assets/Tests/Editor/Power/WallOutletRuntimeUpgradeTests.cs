@@ -70,6 +70,81 @@ namespace Octoplug.Tests.Editor
         }
 
         [Test]
+        public void RuntimeInitializationRegistersExactlyRequestedActiveSockets()
+        {
+            var outlet = CreateWallOutlet();
+
+            Assert.That(
+                outlet.TryInitializeActiveSocketCount(
+                    3,
+                    out var failure),
+                Is.True);
+            Assert.That(
+                failure,
+                Is.EqualTo(WallOutletSocketCountFailure.None));
+            Assert.That(outlet.ActiveSocketCount, Is.EqualTo(3));
+
+            var registered = UnityEngine.Object.FindObjectsByType<
+                SocketConnector>(FindObjectsSortMode.None);
+            var registeredActive = 0;
+            for (var i = 0; i < registered.Length; i++)
+            {
+                if (registered[i].GetComponentInParent<WallOutlet>() == outlet
+                    && registered[i].isActiveAndEnabled
+                    && registered[i].IsActiveSocket)
+                {
+                    registeredActive++;
+                }
+            }
+
+            Assert.That(registeredActive, Is.EqualTo(3));
+            for (var i = 0; i < outlet.Sockets.Count; i++)
+            {
+                Assert.That(
+                    outlet.Sockets[i].isActiveAndEnabled,
+                    Is.EqualTo(i < 3));
+            }
+        }
+
+        [Test]
+        public void RuntimeInitializedSocketIsCandidateAndReconnects()
+        {
+            var outlet = CreateWallOutlet(Vector2.zero);
+            Assert.That(
+                outlet.TryInitializeActiveSocketCount(
+                    2,
+                    out var failure),
+                Is.True);
+            Assert.That(
+                failure,
+                Is.EqualTo(WallOutletSocketCountFailure.None));
+            var socket = outlet.Sockets[1];
+            var product = CreateProduct("TV", Vector2.zero);
+            PlaceProductNearSocket(product, socket);
+            MarkWalkableForCableAndApproach(product, socket);
+            var controller = GetRoutingController(product);
+            var pointer = (Vector2)socket.ConnectorTransform.position
+                + socket.ApproachDirection * Grid.CellSize;
+
+            Assert.That(
+                controller.TryResolveSocketCandidate(
+                    pointer,
+                    out var candidate,
+                    out var path),
+                Is.True);
+            Assert.That(candidate, Is.SameAs(socket));
+            Assert.That(path, Is.Not.Null.And.Count.GreaterThanOrEqualTo(2));
+            Assert.That(Connect(product.Cable.Plug, candidate), Is.True);
+            Assert.That(product.Cable.Plug.ConnectedSocket, Is.SameAs(socket));
+
+            Disconnect(product.Cable.Plug);
+            Assert.That(product.Cable.Plug.ConnectedSocket, Is.Null);
+            Assert.That(socket.ConnectedPlug, Is.Null);
+            Assert.That(Connect(product.Cable.Plug, socket), Is.True);
+            Assert.That(product.Cable.Plug.ConnectedSocket, Is.SameAs(socket));
+        }
+
+        [Test]
         public void ConnectedTwoToThreeUpgradePreservesIdentitiesAndHouseUsage()
         {
             var outlet = CreateWallOutlet();

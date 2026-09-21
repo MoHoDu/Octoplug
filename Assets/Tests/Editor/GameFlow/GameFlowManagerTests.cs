@@ -46,6 +46,7 @@ namespace Octoplug.Tests.Editor.GameFlow
             var gridObject = new GameObject("Grid");
             gridObject.transform.SetParent(root.transform);
             var gridService = gridObject.AddComponent<CableRoutingGridService>();
+            gridService.InitializeForVerification();
 
             var roomGenObj = new GameObject("RoomGen");
             roomGenObj.transform.SetParent(root.transform);
@@ -60,6 +61,7 @@ namespace Octoplug.Tests.Editor.GameFlow
             so.ApplyModifiedProperties();
 
             roomGen.Initialize();
+            Assert.That(roomGen.State.HasNextRoomPlan, Is.True, "RoomGen should have next room plan after Initialize");
 
             // Resident Demand Setup
             var residentDemandObj = new GameObject("ResidentDemand");
@@ -97,9 +99,8 @@ namespace Octoplug.Tests.Editor.GameFlow
             gfSo.FindProperty("cameraBridge").objectReferenceValue = cameraBridge;
             gfSo.ApplyModifiedProperties();
 
-            // Force OnEnable
-            gameFlow.enabled = false;
-            gameFlow.enabled = true;
+            // Force OnEnable via verification method
+            gameFlow.InitializeForVerification();
         }
 
         [TearDown]
@@ -185,11 +186,12 @@ namespace Octoplug.Tests.Editor.GameFlow
             Assert.That(rewardRequestedFired, Is.True);
 
             gameFlow.CompleteRewardPhase();
-            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.CameraReveal), "Queued EXP should trigger immediately.");
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(3), "Room 3 should be promoted");
             Assert.That(Time.timeScale, Is.EqualTo(1f));
 
             // G. EXP Cycle Reset
-            Assert.That(sessionProgress.RequiredExperience, Is.EqualTo(30), "Required EXP should update to next tier based on room count 2.");
+            Assert.That(sessionProgress.RequiredExperience, Is.EqualTo(40), "Required EXP should update to next tier based on room count 2.");
             Assert.That(sessionProgress.CurrentExperience, Is.EqualTo(0), "EXP should be reset to 0 based on current policy.");
 
             // H. GameOver
@@ -203,7 +205,7 @@ namespace Octoplug.Tests.Editor.GameFlow
 
             // Ensure no progression happens during game over
             sessionProgress.ApplyOutcomeForVerification(CreateDummyOutcome(DemandResolution.Success, 500, 0));
-            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(2));
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(3));
         }
     }
 }

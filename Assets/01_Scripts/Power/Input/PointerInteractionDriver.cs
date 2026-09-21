@@ -37,7 +37,7 @@ namespace Octoplug.Power.Input
             var mouse = Mouse.current;
             if (mouse != null && mouse.leftButton.wasReleasedThisFrame)
             {
-                PointerInteractionResolver.ReleasePointer();
+                PointerInteractionResolver.EndPointerGesture();
             }
         }
 

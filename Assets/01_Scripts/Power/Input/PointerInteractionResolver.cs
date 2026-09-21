@@ -94,6 +94,17 @@ namespace Octoplug.Power.Input
             }
 
             captureFrame = Time.frameCount;
+
+            if (Octoplug.GameFlow.GameplayInputLock.SuppressUntilPointerRelease)
+            {
+                if (Mouse.current != null && Mouse.current.leftButton.isPressed)
+                {
+                    capturedTarget = "GameplayInputLock";
+                    return;
+                }
+                Octoplug.GameFlow.GameplayInputLock.SuppressUntilPointerRelease = false;
+            }
+
             if (IsPointerOverUi(screenPos))
             {
                 capturedTarget = typeof(EventSystem);
@@ -102,7 +113,14 @@ namespace Octoplug.Power.Input
 
             if (Octoplug.GameFlow.GameplayInputLock.IsLocked)
             {
-                capturedTarget = "GameplayInputLock";
+                if (Octoplug.GameFlow.GameplayInputLock.AllowCameraMovementDuringLock)
+                {
+                    capturedTarget = typeof(PointerInteractionResolver);
+                }
+                else
+                {
+                    capturedTarget = "GameplayInputLock";
+                }
                 return;
             }
 
@@ -128,9 +146,15 @@ namespace Octoplug.Power.Input
             }
         }
 
-        public static void ReleasePointer()
+        public static void EndPointerGesture()
         {
             capturedTarget = null;
+            Octoplug.GameFlow.GameplayInputLock.SuppressUntilPointerRelease = false;
+        }
+
+        public static void ReleasePointer()
+        {
+            EndPointerGesture();
         }
 
         public static bool IsPointerOverPlug(Vector2 worldPos)

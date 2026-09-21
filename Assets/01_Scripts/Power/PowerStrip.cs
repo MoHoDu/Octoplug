@@ -112,56 +112,139 @@ namespace Octoplug.Power
             return index >= 0 && index < activeSocketCount && index < sockets.Count;
         }
 
-        public bool TryUpgradeActiveSocketCount(
+        /// <summary>
+        /// Applies the requested capacity to a newly instantiated strip while
+        /// retaining its authored modules and runtime identities. Unlike gameplay
+        /// upgrades, initialization may safely reduce the authored initial count.
+        /// </summary>
+        public bool TryInitializeActiveSocketCount(
+            int requestedCount,
             out PowerStripSocketCountFailure failure)
         {
             EnsureInitialized();
             return TrySetActiveSocketCount(
-                activeSocketCount + 1,
+                requestedCount,
+                allowDecrease: true,
+                requireAuthoredConfiguration: true,
                 out failure);
+        }
+
+        public bool CanUpgradeActiveSocketCount(
+            int additionalSockets,
+            out PowerStripSocketCountFailure failure)
+        {
+            EnsureInitialized();
+            return ValidateActiveSocketCount(
+                activeSocketCount + additionalSockets,
+                allowDecrease: false,
+                requireAuthoredConfiguration: false,
+                out failure);
+        }
+
+        public bool TryUpgradeActiveSocketCount(
+            int additionalSockets,
+            out PowerStripSocketCountFailure failure)
+        {
+            EnsureInitialized();
+            return TrySetActiveSocketCount(
+                activeSocketCount + additionalSockets,
+                allowDecrease: false,
+                requireAuthoredConfiguration: false,
+                out failure);
+        }
+
+        public bool TryUpgradeActiveSocketCount(
+            out PowerStripSocketCountFailure failure)
+        {
+            return TryUpgradeActiveSocketCount(1, out failure);
+        }
+
+        public bool CanUpgradeAllowedPowerWatts(
+            out PowerStripUpgradeFailure failure)
+        {
+            EnsureInitialized();
+            return ValidateAllowedPowerUpgrade(out failure);
         }
 
         public bool TryUpgradeAllowedPowerWatts(
             out PowerStripUpgradeFailure failure)
         {
             EnsureInitialized();
-            failure = PowerStripUpgradeFailure.None;
-
-            if (!float.IsFinite(allowedPowerWatts)
-                || !float.IsFinite(maxAllowedPowerWatts))
+            if (!ValidateAllowedPowerUpgrade(out failure))
             {
-                failure = PowerStripUpgradeFailure.InvalidState;
                 return false;
             }
 
-            if (allowedPowerWatts < 0f || maxAllowedPowerWatts < 0f)
-            {
-                failure = PowerStripUpgradeFailure.InvalidState;
-                return false;
-            }
-
-            var maximum = Mathf.Min(maxAllowedPowerWatts, 10f);
-            if (allowedPowerWatts >= maximum)
-            {
-                failure = PowerStripUpgradeFailure.MaximumReached;
-                return false;
-            }
-
-            var upgradedValue = allowedPowerWatts + 1f;
-            if (!float.IsFinite(upgradedValue)
-                || upgradedValue > maximum)
-            {
-                failure = PowerStripUpgradeFailure.MaximumReached;
-                return false;
-            }
-
-            allowedPowerWatts = upgradedValue;
+            allowedPowerWatts += 1f;
             AllowanceChanged?.Invoke(this);
             return true;
         }
 
         private bool TrySetActiveSocketCount(
             int requestedCount,
+            bool allowDecrease,
+            bool requireAuthoredConfiguration,
+            out PowerStripSocketCountFailure failure)
+        {
+            if (!ValidateActiveSocketCount(
+                    requestedCount,
+                    allowDecrease,
+                    requireAuthoredConfiguration,
+                    out failure))
+            {
+                return false;
+            }
+
+            if (requestedCount == activeSocketCount && !requireAuthoredConfiguration)
+            {
+                return true;
+            }
+
+            var grid = CableRoutingGridService.Instance.Grid;
+            if (!placementFootprint.TryReserveAt(grid, transform.position, requestedCount))
+            {
+                failure = PowerStripSocketCountFailure.PlacementUnavailable;
+                return false;
+            }
+
+            var oldCount = activeSocketCount;
+            activeSocketCount = requestedCount;
+            socketLayout.Apply(requestedCount);
+            ActiveSocketCountChanged?.Invoke(this, oldCount, requestedCount);
+            PlugSocketConnection.NotifyTopologyChanged();
+            return true;
+        }
+
+        private bool ValidateAllowedPowerUpgrade(
+            out PowerStripUpgradeFailure failure)
+        {
+            failure = PowerStripUpgradeFailure.None;
+            if (!float.IsFinite(allowedPowerWatts)
+                || !float.IsFinite(maxAllowedPowerWatts)
+                || allowedPowerWatts < 0f
+                || maxAllowedPowerWatts < 0f)
+            {
+                failure = PowerStripUpgradeFailure.InvalidState;
+                return false;
+            }
+
+            var maximum = Mathf.Min(maxAllowedPowerWatts, 10f);
+            var upgradedValue = allowedPowerWatts + 1f;
+            if (allowedPowerWatts >= maximum
+                || !float.IsFinite(upgradedValue)
+                || upgradedValue > maximum)
+            {
+                failure = PowerStripUpgradeFailure.MaximumReached;
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateActiveSocketCount(
+            int requestedCount,
+            bool allowDecrease,
+            bool requireAuthoredConfiguration,
             out PowerStripSocketCountFailure failure)
         {
             failure = PowerStripSocketCountFailure.None;
@@ -171,15 +254,15 @@ namespace Octoplug.Power
                 return false;
             }
 
-            if (requestedCount == activeSocketCount)
-            {
-                return true;
-            }
-
-            if (requestedCount < activeSocketCount)
+            if (requestedCount < activeSocketCount && !allowDecrease)
             {
                 failure = PowerStripSocketCountFailure.SocketCountDecreaseUnsupported;
                 return false;
+            }
+
+            if (requestedCount == activeSocketCount && !requireAuthoredConfiguration)
+            {
+                return true;
             }
 
             if (socketLayout == null
@@ -209,17 +292,12 @@ namespace Octoplug.Power
                 return false;
             }
 
-            if (!placementFootprint.TryReserveAt(grid, transform.position, requestedCount))
+            if (!placementFootprint.CanReserveAt(grid, transform.position, requestedCount))
             {
                 failure = PowerStripSocketCountFailure.PlacementUnavailable;
                 return false;
             }
 
-            var oldCount = activeSocketCount;
-            activeSocketCount = requestedCount;
-            socketLayout.Apply(requestedCount);
-            ActiveSocketCountChanged?.Invoke(this, oldCount, requestedCount);
-            PlugSocketConnection.NotifyTopologyChanged();
             return true;
         }
 
@@ -231,6 +309,16 @@ namespace Octoplug.Power
         private void Awake()
         {
             EnsureInitialized();
+        }
+
+        private void OnEnable()
+        {
+            RuntimeWorldRegistry.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            RuntimeWorldRegistry.Unregister(this);
         }
 
         private void EnsureInitialized()

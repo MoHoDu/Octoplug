@@ -1,0 +1,22 @@
+# Todo
+
+- [x] Preserve the prior TASK-012 baseline and record Human Verification failures.
+- [x] Replace cached reward targets with live runtime discovery and shared production finalization.
+- [x] Remove RW007 from reward catalog, applicability, selection, and application.
+- [x] Generate exactly one Wall Outlet for every seed/promoted active room while preserving socket ranges and `60/25/10/4/1` weights.
+- [x] Derive Wall Outlet placement from authored bounds/inward normals and finalize it before Products.
+- [x] Preserve RC001–RC007 Product type/count data as the validated local Google Sheet-derived runtime catalog.
+- [x] Search all footprint-valid Product positions instead of aborting after the first unreachable candidate.
+- [x] Require grid clearance, authored-bounds Physics2D clearance, and production-routed initial cable reachability.
+- [x] Require exact selected RoomConfig Product composition; roll back partial room content and suppress `RoomContentReady` on shortfall.
+- [ ] Complete bidirectional Door/Outlet exclusion through the existing Door planner.
+- [ ] Complete RW009 physics-overlap validation while retaining clicked point, bounded correction, and selective dimming.
+- [x] Add Product Tooltip outside-pointer-down dismissal.
+- [x] Add persistent Alert instructions with transient override/restoration.
+- [x] Add focused Product candidate and balance tests.
+- [x] Reproduce runtime Wall Outlet readiness through the production room lifecycle and verify terminal route/candidate resolution.
+- [x] Reuse shared terminal routing in gameplay and verify generated Plug connect/power/disconnect/reconnect; full EditMode suite is 103/103.
+- [ ] Complete only the focused matching-Editor Human Verification for generated-outlet magnetic correction, cable, power, disconnect, and reconnect.
+- [ ] Re-run final Unity, fast, harness, task-context, and diff verification after remaining scope.
+- [ ] Keep Google Sheet sync out of scope.
+- [ ] Keep `HUMAN_VERIFY_REQUIRED`; do not commit, push, or mark DONE.

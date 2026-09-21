@@ -54,6 +54,16 @@ namespace Octoplug.Power
 
         public event System.Action<ApplianceSource, bool> PoweredChanged;
 
+        private void OnEnable()
+        {
+            RuntimeWorldRegistry.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            RuntimeWorldRegistry.Unregister(this);
+        }
+
         /// <summary>Set by the power-validation flow only; see <see cref="IsPowered"/>.</summary>
         public void SetPowered(bool powered)
         {

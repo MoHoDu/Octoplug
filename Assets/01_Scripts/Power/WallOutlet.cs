@@ -81,6 +81,18 @@ namespace Octoplug.Power
             return index >= 0 && index < activeSocketCount && index < sockets.Count;
         }
 
+        public bool TryInitializeActiveSocketCount(
+            int requestedCount,
+            out WallOutletSocketCountFailure failure)
+        {
+            EnsureInitialized();
+            return TrySetActiveSocketCount(
+                requestedCount,
+                allowDecrease: true,
+                requireAuthoredConfiguration: true,
+                out failure);
+        }
+
         public bool TryUpgradeActiveSocketCount(
             out WallOutletSocketCountFailure failure)
         {
@@ -91,11 +103,17 @@ namespace Octoplug.Power
                 return false;
             }
 
-            return TrySetActiveSocketCount(activeSocketCount + 1, out failure);
+            return TrySetActiveSocketCount(
+                activeSocketCount + 1,
+                allowDecrease: false,
+                requireAuthoredConfiguration: false,
+                out failure);
         }
 
         private bool TrySetActiveSocketCount(
             int requestedCount,
+            bool allowDecrease,
+            bool requireAuthoredConfiguration,
             out WallOutletSocketCountFailure failure)
         {
             failure = WallOutletSocketCountFailure.None;
@@ -105,12 +123,12 @@ namespace Octoplug.Power
                 return false;
             }
 
-            if (requestedCount == activeSocketCount)
+            if (requestedCount == activeSocketCount && !requireAuthoredConfiguration)
             {
                 return true;
             }
 
-            if (requestedCount < activeSocketCount)
+            if (requestedCount < activeSocketCount && !allowDecrease)
             {
                 failure = WallOutletSocketCountFailure.SocketCountDecreaseUnsupported;
                 return false;
@@ -144,6 +162,16 @@ namespace Octoplug.Power
         private void Awake()
         {
             EnsureInitialized();
+        }
+
+        private void OnEnable()
+        {
+            RuntimeWorldRegistry.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            RuntimeWorldRegistry.Unregister(this);
         }
 
         private void EnsureInitialized()

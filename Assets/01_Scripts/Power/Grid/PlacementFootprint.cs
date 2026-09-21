@@ -53,7 +53,10 @@ namespace Octoplug.Power.Grid
 
         private void OnEnable()
         {
-            TryInitializeReservation();
+            if (!RuntimeSpawnGate.IsStaging)
+            {
+                TryInitializeReservation();
+            }
         }
 
         private void Start()

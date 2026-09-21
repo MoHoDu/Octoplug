@@ -37,6 +37,13 @@ Current rules:
 - `RoomGenerationTestController` renders one stored locked hint and promotes that exact stored plan before separately planning the next hint.
 - Locked hatching remains unavailable because no approved resize-safe hatching anchor exists; the copied test uses dashed walls plus the lock icon and reports `ART_DESIGN_REQUIRED`.
 
+## Production Room Content
+
+- `DefaultRoomContentBalance` is the validated local runtime mirror of the Sheet-authored RC001–RC007 room configurations; runtime generation does not access the Sheet or network.
+- Every gameplay-active room finalizes its required Wall Outlet before Product placement.
+- Product placement exhaustively searches full-footprint grid candidates, rejects positive-area authored-bounds overlap with Products/PowerStrips, and requires a production-routed path to a room-owned outlet within the initial cable length.
+- Accepted Products reserve their placement cells synchronously. A selected RoomConfig succeeds only when its exact Product type/count composition is finalized; a shortfall rolls back that room-content transaction and suppresses `RoomContentReady`.
+
 ## Design Direction
 
 The concept document describes procedural room generation and unlocking a new room and resident as progression advances. The copied test integration verifies the Room hint/unlock lifecycle and rendering contract; production progression/session ownership remains separate.

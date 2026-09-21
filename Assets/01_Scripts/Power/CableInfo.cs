@@ -38,26 +38,26 @@ namespace Octoplug.Power
         public PlugConnector Plug => plug;
         public LineRenderer Line => line;
 
+        public bool CanUpgradeCableLength()
+        {
+            return float.IsFinite(cableLength)
+                && cableLength >= 0f
+                && float.IsFinite(cableLength + 1f);
+        }
+
         public bool TryUpgradeCableLength(
             out CableLengthUpgradeFailure failure)
         {
             failure = CableLengthUpgradeFailure.None;
-            if (!float.IsFinite(cableLength) || cableLength < 0f)
-            {
-                failure = CableLengthUpgradeFailure.InvalidState;
-                return false;
-            }
-
-            var upgradedLength = cableLength + 1f;
-            if (!float.IsFinite(upgradedLength))
+            if (!CanUpgradeCableLength())
             {
                 failure = CableLengthUpgradeFailure.InvalidState;
                 return false;
             }
 
             var oldLength = cableLength;
-            cableLength = upgradedLength;
-            CableLengthChanged?.Invoke(this, oldLength, upgradedLength);
+            cableLength += 1f;
+            CableLengthChanged?.Invoke(this, oldLength, cableLength);
             return true;
         }
     }

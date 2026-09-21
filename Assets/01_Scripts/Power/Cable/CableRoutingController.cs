@@ -167,24 +167,10 @@ namespace Octoplug.Power.Cable
         {
             socket = null;
             worldPath = null;
-            if (cableInfo == null
-                || cableInfo.Origin == null
-                || cableInfo.Plug == null)
-            {
-                return false;
-            }
-
-            ResolveConnectionOwners();
-            var grid = ResolveGrid();
-            if (grid == null)
-            {
-                return false;
-            }
-
-            var originPosition =
-                (Vector2)cableInfo.Origin.position;
-            var originCell = grid.WorldToCell(originPosition);
-            if (!grid.IsWalkable(originCell)
+            if (!TryResolveRoutingContext(
+                    out var grid,
+                    out var originPosition,
+                    out var originCell)
                 || !TryFindNearestSocket(
                     originPosition,
                     originCell,
@@ -200,6 +186,52 @@ namespace Octoplug.Power.Cable
 
             worldPath = resolvedPath;
             return true;
+        }
+
+        /// <summary>
+        /// Commits the same validated magnetic Socket drop used by pointer-up.
+        /// This keeps runtime integration checks on the production transaction
+        /// without injecting a Socket or bypassing routing, graph, or power
+        /// validation.
+        /// </summary>
+        public bool TryCommitSocketDrop(Vector2 pointerWorldPosition)
+        {
+            return TryResolveRoutingContext(
+                       out var grid,
+                       out var originPosition,
+                       out var originCell)
+                && TryConnectToNearbySocket(
+                    originPosition,
+                    originCell,
+                    pointerWorldPosition,
+                    grid);
+        }
+
+        private bool TryResolveRoutingContext(
+            out CableRoutingGrid grid,
+            out Vector2 originPosition,
+            out GridCoord originCell)
+        {
+            grid = null;
+            originPosition = default;
+            originCell = default;
+            if (cableInfo == null
+                || cableInfo.Origin == null
+                || cableInfo.Plug == null)
+            {
+                return false;
+            }
+
+            ResolveConnectionOwners();
+            grid = ResolveGrid();
+            if (grid == null)
+            {
+                return false;
+            }
+
+            originPosition = cableInfo.Origin.position;
+            originCell = grid.WorldToCell(originPosition);
+            return grid.IsWalkable(originCell);
         }
 
         /// <summary>
@@ -951,6 +983,13 @@ namespace Octoplug.Power.Cable
                     out var rejectedSocket,
                     out var rejectedReason))
             {
+                Debug.Log(
+                    $"[PlugDrop]\n" +
+                    $"Socket candidate found: {rejectedSocket != null}\n" +
+                    $"Socket ID: {(rejectedSocket != null ? rejectedSocket.GetInstanceID().ToString() : "None")}\n" +
+                    $"CanConnect: false\n" +
+                    $"Reject reason: {(rejectedSocket != null ? rejectedReason.ToString() : "No active, free, room-side, routable socket in acquisition range")}",
+                    this);
                 if (recentlyDetachedSocket == null
                     || recentlyDetachedSocket.IsConnected
                     || !recentlyDetachedSocket.IsPointerOnApproachSide(
@@ -1139,85 +1178,13 @@ namespace Octoplug.Power.Cable
         /// </summary>
         private bool TryRouteToSocket(Vector2 originPos, GridCoord originCell, Octoplug.Power.SocketConnector socket, CableRoutingGrid grid, out List<Vector2> worldPath)
         {
-            worldPath = null;
-            var socketPos = (Vector2)socket.ConnectorTransform.position;
-            if (!TryGetSocketApproachCell(socket, grid, out var approachCell))
-            {
-                return false;
-            }
-
-            if (!GridPathfinder.TryFindPath(grid, originCell, approachCell, out var cellPath))
-            {
-                return false;
-            }
-
-            worldPath = BuildWorldPath(originPos, cellPath, socketPos, grid);
-            return true;
-        }
-
-        /// <summary>
-        /// The nearest walkable cell to <paramref name="socketPos"/>'s own
-        /// cell, searched within <see cref="socketApproachSearchRadius"/>
-        /// cells only — deliberately short (wall-thickness scale, not
-        /// <see cref="nearestValidSearchRadius"/>'s room-scale radius) so a
-        /// Socket mounted on a shared wall resolves to the Approach Point
-        /// on its own room's interior side, never tunnels through to a
-        /// walkable cell in a different room on the wall's far side.
-        /// Returns the Socket's own cell unchanged (true) when it is
-        /// already walkable.
-        /// </summary>
-        private bool TryGetSocketApproachCell(
-            Octoplug.Power.SocketConnector socket,
-            CableRoutingGrid grid,
-            out GridCoord approachCell)
-        {
-            var socketPos = (Vector2)socket.ConnectorTransform.position;
-            var socketCell = grid.WorldToCell(socketPos);
-            approachCell = socketCell;
-            if (grid.IsWalkable(socketCell))
-            {
-                return true;
-            }
-
-            var found = false;
-            var bestSqrDistance = float.PositiveInfinity;
-            for (var x = -socketApproachSearchRadius;
-                 x <= socketApproachSearchRadius;
-                 x++)
-            {
-                for (var y = -socketApproachSearchRadius;
-                     y <= socketApproachSearchRadius;
-                     y++)
-                {
-                    var candidate = new GridCoord(
-                        socketCell.X + x,
-                        socketCell.Y + y);
-                    if (!grid.IsWalkable(candidate))
-                    {
-                        continue;
-                    }
-
-                    var candidatePos = grid.CellToWorld(candidate);
-                    if (socket.IsTerminalEndpoint
-                        && Vector2.Dot(
-                            candidatePos - socketPos,
-                            socket.ApproachDirection) <= 0f)
-                    {
-                        continue;
-                    }
-
-                    var sqrDistance =
-                        (candidatePos - socketPos).sqrMagnitude;
-                    if (sqrDistance < bestSqrDistance)
-                    {
-                        bestSqrDistance = sqrDistance;
-                        approachCell = candidate;
-                        found = true;
-                    }
-                }
-            }
-
-            return found;
+            return CableRouteReachability.TryBuildPath(
+                grid,
+                originPos,
+                socket,
+                socketApproachSearchRadius,
+                minRenderSegmentLength,
+                out worldPath);
         }
 
         /// <summary>

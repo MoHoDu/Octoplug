@@ -82,12 +82,12 @@ Write-Output $scenesJson
 if ($Compile) {
     # The trigger request can be interrupted by the successful domain reload.
     $null = & $unity.Source command recompile --project-path $resolvedProject --format json 2>&1
-    $compile = Wait-Recompile
-    if ($compile.failed -or $compile.compilationFailed -or @($compile.errors).Count -gt 0) {
-        throw "Unity compilation failed: $(@($compile.errors) -join '; ')"
+    $compileResult = Wait-Recompile
+    if ($compileResult.failed -or $compileResult.compilationFailed -or @($compileResult.errors).Count -gt 0) {
+        throw "Unity compilation failed: $(@($compileResult.errors) -join '; ')"
     }
 
-    Write-Output "Unity compilation: $($compile.status)"
+    Write-Output "Unity compilation: $($compileResult.status)"
 }
 
 if ($RunTests) {

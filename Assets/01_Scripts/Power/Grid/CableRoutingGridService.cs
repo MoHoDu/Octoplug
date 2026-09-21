@@ -100,6 +100,7 @@ namespace Octoplug.Power.Grid
         public void RebuildFromScene()
         {
             Physics2D.SyncTransforms();
+            if (grid == null) Initialize();
             grid.Clear();
 
 #if UNITY_2023_1_OR_NEWER

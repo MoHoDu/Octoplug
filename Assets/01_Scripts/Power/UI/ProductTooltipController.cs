@@ -100,9 +100,27 @@ namespace Octoplug.Power.UI
                 return;
             }
 
-            if (mouse.leftButton.wasPressedThisFrame && TryGetPointerWorldPosition(out var downPos))
+            if (mouse.leftButton.wasPressedThisFrame)
             {
-                Octoplug.Power.Input.PointerInteractionResolver.BeginPointerDown(downPos);
+                var screenPosition = mouse.position.ReadValue();
+                var pointerInsidePanel = panel != null
+                    && panel.gameObject.activeSelf
+                    && RectTransformUtility.RectangleContainsScreenPoint(
+                        panel,
+                        screenPosition,
+                        ResolveUiCamera(panel));
+                if (panel != null
+                    && panel.gameObject.activeSelf
+                    && !pointerInsidePanel)
+                {
+                    Hide();
+                }
+
+                if (!pointerInsidePanel
+                    && TryGetPointerWorldPosition(out var downPos))
+                {
+                    Octoplug.Power.Input.PointerInteractionResolver.BeginPointerDown(downPos);
+                }
             }
 
             if (!mouse.leftButton.wasReleasedThisFrame)
@@ -307,6 +325,17 @@ namespace Octoplug.Power.UI
 
             return right > productBounds.xMin && left < productBounds.xMax
                                                && top > productBounds.yMin && bottom < productBounds.yMax;
+        }
+
+        private static Camera ResolveUiCamera(RectTransform target)
+        {
+            var canvas = target != null ? target.GetComponentInParent<Canvas>() : null;
+            if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return null;
+            }
+
+            return canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
         }
 
         private static bool TryGetPointerWorldPosition(out Vector2 worldPos)

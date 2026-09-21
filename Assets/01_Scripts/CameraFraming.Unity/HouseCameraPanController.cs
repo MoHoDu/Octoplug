@@ -105,6 +105,10 @@ namespace Octoplug.CameraFraming.Unity
             }
 
             cinemachineCamera.transform.position = next;
+            if (Time.timeScale == 0f && outputCamera != null)
+            {
+                outputCamera.transform.position = next;
+            }
             CameraMotionStarted?.Invoke();
         }
     }

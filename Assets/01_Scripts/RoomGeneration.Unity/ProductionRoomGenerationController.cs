@@ -27,6 +27,9 @@ namespace Octoplug.RoomGeneration.Unity
         [SerializeField]
         private CableRoutingGridService routingGrid;
 
+        [SerializeField]
+        private RoomContentGenerationController roomContentGeneration;
+
         [Header("Candidate sequence")]
         [SerializeField]
         private string seedRoomId = "room-seed";
@@ -52,6 +55,11 @@ namespace Octoplug.RoomGeneration.Unity
 
         public RoomGenerationState State => state;
         public bool IsInitialized => initialized;
+
+        public bool TryGetRoomBinder(RoomId roomId, out RoomGenerationRoomBinder binder)
+        {
+            return bindersById.TryGetValue(roomId, out binder) && binder != null;
+        }
 
         private void Start()
         {
@@ -91,8 +99,7 @@ namespace Octoplug.RoomGeneration.Unity
             seedRoom.SetAuthoredDoorTemplateVisible(true);
             initialized = true;
 
-            routingGrid.RebuildFromScene();
-            RoomContentReady?.Invoke(seedPlacement);
+            FinalizeRoomContent(seedPlacement);
             PlanStoreAndRenderNextHint();
         }
 
@@ -129,10 +136,31 @@ namespace Octoplug.RoomGeneration.Unity
             RenderState();
 
             RoomUnlocked?.Invoke(promoted);
-            routingGrid.RebuildFromScene();
-            RoomContentReady?.Invoke(promoted);
+            FinalizeRoomContent(promoted);
             PlanStoreAndRenderNextHint();
             return true;
+        }
+
+        private void FinalizeRoomContent(RoomPlacement room)
+        {
+            // The promoted Room geometry must be present in the grid before
+            // content placement queries it. A second rebuild below is the
+            // authoritative post-content snapshot used by Plug routing.
+            routingGrid.RebuildFromScene();
+            roomContentGeneration ??=
+                GetComponent<RoomContentGenerationController>();
+            if (roomContentGeneration != null
+                && !roomContentGeneration.GenerateRoomContent(room))
+            {
+                Debug.LogWarning(
+                    $"Room content generation failed for {room.Id}; " +
+                    "RoomContentReady will not be published.",
+                    this);
+                return;
+            }
+
+            routingGrid.RebuildFromScene();
+            RoomContentReady?.Invoke(room);
         }
 
         private void PlanStoreAndRenderNextHint()
@@ -248,6 +276,9 @@ namespace Octoplug.RoomGeneration.Unity
             {
                 throw new InvalidOperationException("Seed room, room prefab, rooms root, and routing grid references are required.");
             }
+
+            roomContentGeneration ??=
+                GetComponent<RoomContentGenerationController>();
 
             if (string.IsNullOrWhiteSpace(seedRoomId) || string.IsNullOrWhiteSpace(candidateIdPrefix))
             {

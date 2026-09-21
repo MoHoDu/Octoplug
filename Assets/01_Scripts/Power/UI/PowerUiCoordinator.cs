@@ -41,6 +41,9 @@ namespace Octoplug.Power.UI
 
         private Coroutine hideAlertRoutine;
         private bool refreshQueued;
+        private string persistentAlert;
+
+        public static PowerUiCoordinator Instance { get; private set; }
 
         /// <summary>
         /// The authored Orange/Grey colors, captured once from
@@ -58,6 +61,7 @@ namespace Octoplug.Power.UI
 
         private void OnEnable()
         {
+            Instance = this;
             CableRoutingController.AnyConnectionRejected +=
                 OnConnectionRejected;
             PlugSocketConnection.GraphChanged += OnGraphChanged;
@@ -93,11 +97,30 @@ namespace Octoplug.Power.UI
             HousePowerBudget.AllowanceChanged -= OnHouseAllowanceChanged;
             PowerStrip.AllowanceChanged -= OnStripAllowanceChanged;
             refreshQueued = false;
+            if (Instance == this)
+            {
+                Instance = null;
+            }
 
             if (hideAlertRoutine != null)
             {
                 StopCoroutine(hideAlertRoutine);
                 hideAlertRoutine = null;
+            }
+        }
+
+        public void ShowPersistent(string message)
+        {
+            persistentAlert = message ?? string.Empty;
+            ShowAlert(persistentAlert);
+        }
+
+        public void ClearPersistent()
+        {
+            persistentAlert = string.Empty;
+            if (hideAlertRoutine == null)
+            {
+                HideAlert();
             }
         }
 
@@ -110,6 +133,17 @@ namespace Octoplug.Power.UI
                 return;
             }
 
+            ShowAlert(message);
+            if (hideAlertRoutine != null)
+            {
+                StopCoroutine(hideAlertRoutine);
+            }
+
+            hideAlertRoutine = StartCoroutine(HideAlertAfterDelay());
+        }
+
+        private void ShowAlert(string message)
+        {
             if (alertRoot == null || alertText == null)
             {
                 Debug.LogWarning($"{name}: PowerUiCoordinator is missing the existing Alert root or text reference.", this);
@@ -117,14 +151,17 @@ namespace Octoplug.Power.UI
             }
 
             alertText.text = message;
-            alertRoot.SetActive(true);
+            alertRoot.SetActive(!string.IsNullOrEmpty(message));
+        }
 
-            if (hideAlertRoutine != null)
+        private void HideAlert()
+        {
+            if (alertText != null)
             {
-                StopCoroutine(hideAlertRoutine);
+                alertText.text = string.Empty;
             }
 
-            hideAlertRoutine = StartCoroutine(HideAlertAfterDelay());
+            alertRoot?.SetActive(false);
         }
 
         private void OnGraphChanged()
@@ -191,8 +228,15 @@ namespace Octoplug.Power.UI
                 yield return new WaitForSeconds(alertDisplayDurationSeconds);
             }
 
-            alertRoot.SetActive(false);
             hideAlertRoutine = null;
+            if (!string.IsNullOrEmpty(persistentAlert))
+            {
+                ShowAlert(persistentAlert);
+            }
+            else
+            {
+                HideAlert();
+            }
         }
 
         private static bool TryGetAlertMessage(

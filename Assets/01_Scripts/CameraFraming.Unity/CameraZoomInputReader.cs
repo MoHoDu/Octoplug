@@ -30,7 +30,7 @@ namespace Octoplug.CameraFraming.Unity
 
         private void Update()
         {
-            if (Octoplug.GameFlow.GameplayInputLock.IsLocked)
+            if (Octoplug.GameFlow.GameplayInputLock.IsLocked && !Octoplug.GameFlow.GameplayInputLock.AllowCameraMovementDuringLock)
             {
                 previousPinchDistance = null;
                 return;

@@ -30,6 +30,23 @@ namespace Octoplug.GameFlow.Unity
 
         public GameFlowState CurrentState => currentState;
 
+        public void InitializeForVerification()
+        {
+            if (sessionProgress != null)
+            {
+                sessionProgress.ExperienceThresholdReached -= HandleExperienceThresholdReached;
+                sessionProgress.SatisfactionDepleted -= HandleSatisfactionDepleted;
+
+                sessionProgress.ExperienceThresholdReached += HandleExperienceThresholdReached;
+                sessionProgress.SatisfactionDepleted += HandleSatisfactionDepleted;
+            }
+            if (cameraBridge != null)
+            {
+                cameraBridge.CameraRevealCompleted -= HandleCameraRevealCompleted;
+                cameraBridge.CameraRevealCompleted += HandleCameraRevealCompleted;
+            }
+        }
+
         private void OnEnable()
         {
             if (sessionProgress != null)
@@ -72,10 +89,16 @@ namespace Octoplug.GameFlow.Unity
             rewardRequested = currentState == GameFlowState.AwaitingReward;
             isGameOver = currentState == GameFlowState.GameOver;
 
-            Octoplug.GameFlow.GameplayInputLock.IsLocked =
-                currentState == GameFlowState.RewardDelay ||
-                currentState == GameFlowState.AwaitingReward ||
-                currentState == GameFlowState.GameOver;
+            bool shouldLock = currentState == GameFlowState.RewardDelay ||
+                              currentState == GameFlowState.AwaitingReward ||
+                              currentState == GameFlowState.GameOver;
+
+            if (!shouldLock && Octoplug.GameFlow.GameplayInputLock.IsLocked)
+            {
+                Octoplug.GameFlow.GameplayInputLock.SuppressUntilPointerRelease = true;
+            }
+
+            Octoplug.GameFlow.GameplayInputLock.IsLocked = shouldLock;
         }
 
         private void HandleExperienceThresholdReached()
@@ -90,7 +113,6 @@ namespace Octoplug.GameFlow.Unity
             if (roomGeneration != null && roomGeneration.State.HasNextRoomPlan)
             {
                 var nextRoom = roomGeneration.State.NextRoomPlan.Room;
-
                 bool promoted = roomGeneration.PromoteCurrentHint();
 
                 if (promoted)

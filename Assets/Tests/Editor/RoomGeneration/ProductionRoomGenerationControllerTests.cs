@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using Octoplug.Power;
+using Octoplug.Power.Connection;
 using Octoplug.Power.Grid;
+using Octoplug.Power.Routing;
 using Octoplug.RoomGeneration;
 using Octoplug.RoomGeneration.Unity;
 using UnityEditor;
@@ -81,6 +83,173 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             Assert.That(
                 gridService.Grid.GetState(gridService.Grid.WorldToCell(center)),
                 Is.EqualTo(GridCellState.Unknown));
+        }
+
+        [Test]
+        public void RoomContentReady_PublishesAfterRuntimeOutletIsConnectionReady()
+        {
+            var wallOutletPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Wall_Outlets/Wall_Outlet.prefab");
+            Assert.That(wallOutletPrefab, Is.Not.Null);
+            var tvPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/TV.prefab");
+            var fanPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Fan.prefab");
+            var heaterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Heater.prefab");
+            var inductionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Induction.prefab");
+            var airConditionerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Air_Conditioner.prefab");
+            Assert.That(tvPrefab, Is.Not.Null);
+            Assert.That(fanPrefab, Is.Not.Null);
+            Assert.That(heaterPrefab, Is.Not.Null);
+            Assert.That(inductionPrefab, Is.Not.Null);
+            Assert.That(airConditionerPrefab, Is.Not.Null);
+            var outletRoot = new GameObject("Wall_Outlets");
+            createdObjects.Add(outletRoot);
+            var productRoot = new GameObject("Products");
+            createdObjects.Add(productRoot);
+            var content = controller.gameObject.AddComponent<
+                RoomContentGenerationController>();
+            var serializedContent = new SerializedObject(content);
+            serializedContent.FindProperty("roomGeneration")
+                .objectReferenceValue = controller;
+            serializedContent.FindProperty("tvPrefab")
+                .objectReferenceValue = tvPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("fanPrefab")
+                .objectReferenceValue = fanPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("heaterPrefab")
+                .objectReferenceValue = heaterPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("inductionPrefab")
+                .objectReferenceValue = inductionPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("airConditionerPrefab")
+                .objectReferenceValue = airConditionerPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("wallOutletPrefab")
+                .objectReferenceValue = wallOutletPrefab.GetComponent<WallOutlet>();
+            serializedContent.ApplyModifiedPropertiesWithoutUndo();
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("roomContentGeneration")
+                .objectReferenceValue = content;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+
+            controller.Initialize();
+            var promotedRoom = controller.State.NextRoomPlan.Room;
+            WallOutlet readyOutlet = null;
+            SocketConnector readySocket = null;
+            controller.RoomContentReady += room =>
+            {
+                if (room.Id != promotedRoom.Id)
+                {
+                    return;
+                }
+
+                var roomOutlets = new List<WallOutlet>();
+                foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+                {
+                    if (RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                        && owner == room.Id)
+                    {
+                        roomOutlets.Add(outlet);
+                    }
+                }
+
+                Assert.That(roomOutlets, Has.Count.EqualTo(1));
+                readyOutlet = roomOutlets[0];
+                foreach (var socket in readyOutlet.ActiveSockets)
+                {
+                    readySocket = socket;
+                    break;
+                }
+            };
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True);
+            Assert.That(readyOutlet, Is.Not.Null);
+            Assert.That(readySocket, Is.Not.Null);
+            var roomProducts = new List<ApplianceSource>();
+            foreach (var product in RuntimeWorldRegistry.GetProducts())
+            {
+                if (RuntimeWorldRegistry.TryGetRoomOwner(product, out var owner)
+                    && owner == promotedRoom.Id)
+                {
+                    roomProducts.Add(product);
+                }
+            }
+
+            Assert.That(roomProducts.Count, Is.EqualTo(1));
+            Assert.That(readySocket.isActiveAndEnabled, Is.True);
+            Assert.That(readySocket.IsActiveSocket, Is.True);
+            Assert.That(readySocket.IsTerminalEndpoint, Is.True);
+
+            var roomCenter = new Vector2(
+                promotedRoom.Bounds.Center.X,
+                promotedRoom.Bounds.Center.Y);
+            var socketPosition =
+                (Vector2)readySocket.ConnectorTransform.position;
+            Assert.That(
+                Vector2.Dot(
+                    roomCenter - socketPosition,
+                    readySocket.ApproachDirection),
+                Is.GreaterThan(0f));
+
+            var socketCell = gridService.Grid.WorldToCell(socketPosition);
+            Assert.That(
+                gridService.Grid.GetState(socketCell),
+                Is.Not.EqualTo(GridCellState.Unknown));
+            Assert.That(
+                CableRouteReachability.TryBuildPath(
+                    gridService.Grid,
+                    roomProducts[0].Cable.Origin.position,
+                    readySocket,
+                    approachSearchRadius: 3,
+                    minRenderSegmentLength: 0.15f,
+                    out var path),
+                Is.True);
+            Assert.That(path, Is.Not.Null.And.Count.GreaterThanOrEqualTo(2));
+            Assert.That(
+                Vector2.Distance(path[^1], socketPosition),
+                Is.LessThan(0.0001f));
+
+            var routing = roomProducts[0].Cable.GetComponent<
+                Octoplug.Power.Cable.CableRoutingController>();
+            Assert.That(routing, Is.Not.Null);
+            var pointer = socketPosition
+                + readySocket.ApproachDirection * gridService.Grid.CellSize;
+            Assert.That(
+                routing.TryResolveSocketCandidate(
+                    pointer,
+                    out var resolvedSocket,
+                    out var resolvedPath),
+                Is.True);
+            Assert.That(resolvedSocket, Is.Not.Null);
+            Assert.That(
+                resolvedSocket.GetComponentInParent<WallOutlet>(),
+                Is.SameAs(readyOutlet));
+            Assert.That(resolvedSocket.IsActiveSocket, Is.True);
+            Assert.That(resolvedSocket.IsTerminalEndpoint, Is.True);
+            Assert.That(
+                Vector2.Distance(
+                    resolvedPath[^1],
+                    resolvedSocket.ConnectorTransform.position),
+                Is.LessThan(0.0001f));
+
+            Assert.That(routing.TryCommitSocketDrop(pointer), Is.True);
+            Assert.That(
+                roomProducts[0].Cable.Plug.ConnectedSocket,
+                Is.SameAs(resolvedSocket));
+            Assert.That(resolvedSocket.ConnectedPlug,
+                Is.SameAs(roomProducts[0].Cable.Plug));
+            Assert.That(roomProducts[0].IsPowered, Is.True);
+
+            PlugSocketConnection.Disconnect(roomProducts[0].Cable.Plug);
+            roomProducts[0].SetPowered(false);
+            Assert.That(roomProducts[0].Cable.Plug.IsConnected, Is.False);
+            Assert.That(resolvedSocket.IsConnected, Is.False);
+            Assert.That(routing.TryCommitSocketDrop(pointer), Is.True);
+            Assert.That(
+                roomProducts[0].Cable.Plug.ConnectedSocket,
+                Is.SameAs(resolvedSocket));
+            Assert.That(roomProducts[0].IsPowered, Is.True);
         }
 
         [Test]

@@ -125,13 +125,17 @@ namespace Octoplug.CameraFraming.Unity
             {
                 var next = zoomSmoothing <= 0f
                     ? targetOrthographicSize
-                    : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity, zoomSmoothing);
+                    : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity, zoomSmoothing, Mathf.Infinity, Time.unscaledDeltaTime);
                 if (Mathf.Abs(next - targetOrthographicSize) <= 0.001f)
                 {
                     next = targetOrthographicSize;
                 }
 
                 cinemachineCamera.Lens.OrthographicSize = next;
+                if (Time.timeScale == 0f && outputCamera != null)
+                {
+                    outputCamera.orthographicSize = next;
+                }
             }
 
             CompleteRevealIfSettled();
