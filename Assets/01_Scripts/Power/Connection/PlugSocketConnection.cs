@@ -1,4 +1,5 @@
 using System;
+using Octoplug.Audio;
 using Octoplug.Power;
 
 namespace Octoplug.Power.Connection
@@ -42,6 +43,7 @@ namespace Octoplug.Power.Connection
             plug.AssignSocket(socket);
             socket.AssignPlug(plug);
             GraphChanged?.Invoke();
+            GameplaySfxPlayer.Play(GameplaySfxCue.PlugConnect);
             return true;
         }
 
@@ -52,7 +54,10 @@ namespace Octoplug.Power.Connection
         /// </summary>
         public static void Disconnect(PlugConnector plug)
         {
-            DisconnectInternal(plug, true);
+            if (DisconnectInternal(plug, true))
+            {
+                GameplaySfxPlayer.Play(GameplaySfxCue.PlugDisconnect);
+            }
         }
 
         /// <summary>

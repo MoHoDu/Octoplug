@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Octoplug.Audio;
 using Octoplug.Power;
 using Octoplug.Power.Connection;
 using Octoplug.ResidentDemand;
@@ -15,11 +16,22 @@ namespace Octoplug.Tests.Editor.ResidentDemand
     public sealed class ResidentDemandControllerTests
     {
         private readonly List<GameObject> _roots = new();
+        private readonly List<GameplaySfxCue> _playedSfx = new();
         private ResidentDemandController _controller;
+        private IDisposable _playbackOverride;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _playbackOverride = GameplaySfxPlayer.OverridePlaybackForVerification(
+                cue => _playedSfx.Add(cue));
+        }
 
         [TearDown]
         public void TearDown()
         {
+            _playbackOverride?.Dispose();
+            _playedSfx.Clear();
             if (_controller != null)
             {
                 Object.DestroyImmediate(_controller.gameObject);
@@ -47,6 +59,22 @@ namespace Octoplug.Tests.Editor.ResidentDemand
             Assert.That(resident.NeedCount, Is.Zero);
             Assert.That(_controller.CurrentAssignments.Assignments, Is.Empty);
             Assert.That(_controller.CurrentAssignments.Waiting, Is.Empty);
+            Assert.That(_playedSfx, Is.Empty);
+        }
+
+        [Test]
+        public void DemandStartAndRefresh_PlaySpawnOnlyOnce()
+        {
+            CreateProduct("Cold Product", UsageType.Cooling, 1);
+            InitializeController();
+
+            _controller.AddResident();
+            _controller.RefreshDemandAvailability();
+            _controller.RecomputeAssignmentsForVerification();
+
+            Assert.That(
+                _playedSfx,
+                Is.EqualTo(new[] { GameplaySfxCue.NeedSpawn }));
         }
 
         [Test]

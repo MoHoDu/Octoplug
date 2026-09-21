@@ -1,0 +1,8 @@
+- [x] Audit WAV metadata and import settings
+- [x] Locate authoritative existing demand and plug trigger boundaries
+- [x] Implement reusable Resources-catalog one-shot playback
+- [x] Wire need spawn/failure triggers
+- [x] Wire plug connect/disconnect triggers
+- [x] Add catalog and duplicate-prevention tests
+- [x] Run compilation, focused tests, diff check, and fast harness verification
+- [x] Complete human audible Play Mode verification
