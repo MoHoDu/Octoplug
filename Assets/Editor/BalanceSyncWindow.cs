@@ -195,14 +195,14 @@ namespace Octoplug.Editor
                                 enabled = ParseBool(r[1]),
                                 requiredRoomCount = ParseInt(r[2]),
                                 weight = ParseInt(r[3]),
-                                firstNeed = r[4], // The sheet headers may not exactly match my validator. Let me disable header validation to avoid false positives.
-                                secondNeed = r.Count > 5 ? r[5] : "",
-                                satisfactionFillSeconds = ParseFloat(r[6]),
-                                patienceFillSeconds = ParseFloat(r[7]),
-                                experienceReward = ParseInt(r[8]),
-                                globalSatisfactionOnSuccess = ParseInt(r[9]),
-                                globalSatisfactionOnFailure = ParseInt(r[10]),
-                                cooldownSeconds = ParseFloat(r[11])
+                                firstNeed = r[5],
+                                secondNeed = r.Count > 6 ? r[6] : "",
+                                satisfactionFillSeconds = ParseFloat(r[7]),
+                                patienceFillSeconds = ParseFloat(r[8]),
+                                experienceReward = ParseInt(r[9]),
+                                globalSatisfactionOnSuccess = ParseInt(r[10]),
+                                globalSatisfactionOnFailure = ParseInt(r[11]),
+                                cooldownSeconds = ParseFloat(r[12])
                             };
 
                             if (string.IsNullOrWhiteSpace(row.id)) throw new Exception($"Row {i+1}: DemandID empty.");
@@ -236,8 +236,8 @@ namespace Octoplug.Editor
                                 heaterCount = ParseInt(r[9]),
                                 inductionCount = ParseInt(r[10]),
                                 airConditionerCount = ParseInt(r[11]),
-                                wallOutletSocketMin = ParseInt(r[12]),
-                                wallOutletSocketMax = ParseInt(r[13])
+                                wallOutletSocketMin = ParseInt(r[13]),
+                                wallOutletSocketMax = ParseInt(r[14])
                             };
 
                             if (string.IsNullOrWhiteSpace(row.roomConfigId)) throw new Exception($"Row {i+1}: RoomConfigID empty.");
