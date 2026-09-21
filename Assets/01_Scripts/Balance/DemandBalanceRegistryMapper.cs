@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using Octoplug.Balance;
+using Octoplug.ResidentDemand;
 
-namespace Octoplug.ResidentDemand
+namespace Octoplug.Balance
 {
-    public static class DemandAuthoringMapper
+    public static class DemandBalanceRegistryMapper
     {
         public static DemandBalanceCatalog MapAll()
         {

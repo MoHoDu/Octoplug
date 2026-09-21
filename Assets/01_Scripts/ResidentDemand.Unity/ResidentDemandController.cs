@@ -141,7 +141,7 @@ namespace Octoplug.ResidentDemand.Unity
             }
 
             _demandSelector = new WeightedDemandSelector(
-                Octoplug.ResidentDemand.DemandAuthoringMapper.MapAll(),
+                Octoplug.Balance.DemandBalanceRegistryMapper.MapAll(),
                 new SystemRandomSource(randomSeed));
             _initialized = true;
             RefreshProducts();
@@ -168,7 +168,7 @@ namespace Octoplug.ResidentDemand.Unity
 
             _verificationRoomCount = unlockedRoomCount;
             _demandSelector = new WeightedDemandSelector(
-                Octoplug.ResidentDemand.DemandAuthoringMapper.MapAll(),
+                Octoplug.Balance.DemandBalanceRegistryMapper.MapAll(),
                 new SystemRandomSource(randomSeed));
             _initialized = true;
             RefreshProducts();
