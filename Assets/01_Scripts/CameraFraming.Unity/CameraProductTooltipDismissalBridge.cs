@@ -59,7 +59,10 @@ namespace Octoplug.CameraFraming.Unity
 
         private void HideTooltip()
         {
-            productTooltip?.Hide();
+            if (productTooltip != null)
+            {
+                productTooltip.Hide();
+            }
         }
     }
 }

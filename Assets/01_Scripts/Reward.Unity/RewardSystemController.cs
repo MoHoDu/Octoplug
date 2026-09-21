@@ -42,8 +42,16 @@ namespace Octoplug.Reward.Unity
 
             cycle++;
             phaseActive = false;
-            rewardUi?.Hide();
-            targetSelection?.CancelSelection();
+
+            if (rewardUi != null)
+            {
+                rewardUi.Hide();
+            }
+
+            if (targetSelection != null)
+            {
+                targetSelection.CancelSelection();
+            }
         }
 
         private void HandleRewardPhaseRequested()
@@ -51,8 +59,16 @@ namespace Octoplug.Reward.Unity
             cycle++;
             var currentCycle = cycle;
             phaseActive = true;
-            targetSelection?.CancelSelection();
-            rewardUi?.Hide();
+
+            if (targetSelection != null)
+            {
+                targetSelection.CancelSelection();
+            }
+
+            if (rewardUi != null)
+            {
+                rewardUi.Hide();
+            }
 
             ResolvePlacementDependencies();
             placementService = new RewardPlacementService(
@@ -280,8 +296,17 @@ namespace Octoplug.Reward.Unity
             }
 
             phaseActive = false;
-            rewardUi?.Hide();
-            targetSelection?.CancelSelection();
+
+            if (rewardUi != null)
+            {
+                rewardUi.Hide();
+            }
+
+            if (targetSelection != null)
+            {
+                targetSelection.CancelSelection();
+            }
+
             gameFlowManager.CompleteRewardPhase();
         }
     }

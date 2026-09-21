@@ -161,7 +161,10 @@ namespace Octoplug.Power.UI
                 alertText.text = string.Empty;
             }
 
-            alertRoot?.SetActive(false);
+            if (alertRoot != null)
+            {
+                alertRoot.SetActive(false);
+            }
         }
 
         private void OnGraphChanged()
