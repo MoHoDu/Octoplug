@@ -56,6 +56,8 @@ namespace Octoplug.Tests.Editor.ResidentDemand
 
             Assert.That(progress.CurrentExperience, Is.EqualTo(35));
             Assert.That(progress.GlobalSatisfaction, Is.Zero);
+            Assert.That(progress.SolvedDemandCount, Is.EqualTo(2));
+            Assert.That(progress.FailedDemandCount, Is.EqualTo(3));
             Assert.That(changes, Is.EqualTo(5));
             Assert.That(threshold, Is.EqualTo(1));
             Assert.That(depleted, Is.EqualTo(1));

@@ -2602,6 +2602,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1769497663}
   - component: {fileID: 1769497664}
+  - component: {fileID: 1769497665}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -2648,6 +2649,20 @@ MonoBehaviour:
   progressionInProgress: 0
   rewardRequested: 0
   isGameOver: 0
+--- !u!114 &1769497665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1769497662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c5e35946b26cd245893d28c576be79a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.GameFlow.Unity.GameOverResultTransition
+  gameFlow: {fileID: 1769497664}
+  sessionProgress: {fileID: 90914424}
 --- !u!1 &1798720375
 GameObject:
   m_ObjectHideFlags: 0

@@ -44,6 +44,8 @@ namespace Octoplug.ResidentDemand
         public int GlobalSatisfaction { get; private set; }
         public int Experience { get; private set; }
         public int RoomCount { get; private set; }
+        public int SolvedDemandCount { get; private set; }
+        public int FailedDemandCount { get; private set; }
         public int RequiredExperience => _requiredExperience.GetRequiredExperience(RoomCount);
         public bool IsSatisfactionDepleted => _satisfactionDepleted;
         public float SatisfactionNormalized => GlobalSatisfaction / 100f;
@@ -61,14 +63,26 @@ namespace Octoplug.ResidentDemand
                 return;
             }
 
-            GlobalSatisfaction = Clamp(GlobalSatisfaction + outcome.GlobalSatisfactionDelta, 0, 100);
-            if (outcome.Resolution == DemandResolution.Success)
+            checked
             {
-                checked
+                switch (outcome.Resolution)
                 {
-                    Experience += outcome.ExperienceReward;
+                    case DemandResolution.Success:
+                        SolvedDemandCount++;
+                        Experience += outcome.ExperienceReward;
+                        break;
+                    case DemandResolution.Failure:
+                        FailedDemandCount++;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(
+                            nameof(outcome),
+                            outcome.Resolution,
+                            "Unsupported Demand resolution.");
                 }
             }
+
+            GlobalSatisfaction = Clamp(GlobalSatisfaction + outcome.GlobalSatisfactionDelta, 0, 100);
 
             if (GlobalSatisfaction == 0 && !_satisfactionDepleted)
             {
