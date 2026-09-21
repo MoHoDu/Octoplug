@@ -331,14 +331,19 @@ namespace Octoplug.Editor
                         for (int i = 1; i < rows.Count; i++)
                         {
                             var r = rows[i];
-                            var row = new RewardSheetRow
+                                                        var row = new RewardSheetRow
                             {
                                 rewardId = r[0],
-                                targetType = r[1],
-                                effectType = r[2],
-                                effectValue = ParseInt(r[3]),
-                                weight = ParseInt(r[4]),
-                                minRoomCount = ParseInt(r[5])
+                                enabled = ParseBool(r[1]),
+                                minRoomCount = ParseInt(r[2]),
+                                weight = ParseInt(r[3]),
+                                displayName = r[4],
+                                description = r[5],
+                                targetType = r[6],
+                                effect1Type = r[7],
+                                effect1Value = ParseInt(r[8]),
+                                effect2Type = r.Count > 9 ? r[9] : "",
+                                effect2Value = r.Count > 10 ? ParseInt(r[10]) : 0
                             };
 
                             if (string.IsNullOrWhiteSpace(row.rewardId)) throw new Exception($"Row {i+1}: RewardID empty.");
