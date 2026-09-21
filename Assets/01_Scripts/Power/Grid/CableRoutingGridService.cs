@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Octoplug.Power.Grid
@@ -14,6 +15,15 @@ namespace Octoplug.Power.Grid
     [DefaultExecutionOrder(-100)]
     public class CableRoutingGridService : MonoBehaviour
     {
+        private static readonly ProfilerMarker RebuildMarker =
+            new("Octoplug.CableRoutingGrid.RebuildFromScene");
+        private static readonly ProfilerMarker SyncTransformsMarker =
+            new("Octoplug.CableRoutingGrid.SyncTransforms");
+        private static readonly ProfilerMarker FindRoomsMarker =
+            new("Octoplug.CableRoutingGrid.FindRooms");
+        private static readonly ProfilerMarker RebuildRoomsMarker =
+            new("Octoplug.CableRoutingGrid.RebuildRooms");
+
         [SerializeField]
         [Tooltip("World-unit size of one grid cell.")]
         private float cellSize = 0.25f;
@@ -99,21 +109,36 @@ namespace Octoplug.Power.Grid
         /// <summary>Rebuilds the grid from every RoomArea currently loaded in the scene.</summary>
         public void RebuildFromScene()
         {
-            Physics2D.SyncTransforms();
-            if (grid == null) Initialize();
-            grid.Clear();
-
-#if UNITY_2023_1_OR_NEWER
-            var rooms = Object.FindObjectsByType<RoomArea>(FindObjectsSortMode.None);
-#else
-            var rooms = Object.FindObjectsOfType<RoomArea>();
-#endif
-            foreach (var room in rooms)
+            using (RebuildMarker.Auto())
             {
-                RebuildFromRoom(room);
-            }
+                using (SyncTransformsMarker.Auto())
+                {
+                    Physics2D.SyncTransforms();
+                }
 
-            hasBuiltOnce = true;
+                if (grid == null) Initialize();
+                grid.Clear();
+
+                RoomArea[] rooms;
+                using (FindRoomsMarker.Auto())
+                {
+#if UNITY_2023_1_OR_NEWER
+                    rooms = Object.FindObjectsByType<RoomArea>(FindObjectsSortMode.None);
+#else
+                    rooms = Object.FindObjectsOfType<RoomArea>();
+#endif
+                }
+
+                using (RebuildRoomsMarker.Auto())
+                {
+                    foreach (var room in rooms)
+                    {
+                        RebuildFromRoom(room);
+                    }
+                }
+
+                hasBuiltOnce = true;
+            }
         }
 
         /// <summary>Registers one room's floor area, then overlays its wall and door colliders.</summary>

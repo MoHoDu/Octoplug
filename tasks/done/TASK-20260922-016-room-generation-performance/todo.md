@@ -1,0 +1,8 @@
+- [x] Trace the room-promotion synchronous work path
+- [x] Add non-persistent profiler markers for numeric capture
+- [x] Identify repeated full rendering and grid rebuilding as high-cost work
+- [x] Implement the smallest semantics-preserving optimization
+- [x] Add existing-door identity regression coverage
+- [x] Run compilation, focused tests, diff check, and fast harness verification
+- [x] Record structural before/after evidence; numeric Profiler markers remain available for future captures
+- [x] Complete human Play Mode verification

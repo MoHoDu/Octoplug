@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Octoplug.Power.Grid;
 using Octoplug.RoomGeneration;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,6 +14,16 @@ namespace Octoplug.RoomGeneration.Unity
     public sealed class ProductionRoomGenerationController : MonoBehaviour
     {
         private const float SeedLatticeTolerance = 0.01f;
+        private static readonly ProfilerMarker PromoteMarker =
+            new("Octoplug.RoomGeneration.PromoteCurrentHint");
+        private static readonly ProfilerMarker RenderPromotionMarker =
+            new("Octoplug.RoomGeneration.RenderPromotion");
+        private static readonly ProfilerMarker FinalizeContentMarker =
+            new("Octoplug.RoomGeneration.FinalizeContent");
+        private static readonly ProfilerMarker RedistributeMarker =
+            new("Octoplug.RoomGeneration.Redistribute");
+        private static readonly ProfilerMarker PlanHintMarker =
+            new("Octoplug.RoomGeneration.PlanNextHint");
 
         [Header("Production references")]
         [SerializeField]
@@ -139,36 +150,53 @@ namespace Octoplug.RoomGeneration.Unity
                 return false;
             }
 
-            var previousState = state;
-            var promoted = state.NextRoomPlan.Room;
-            state = state.UnlockNext();
-            RenderState();
-
-            if (!FinalizeRoomContent(promoted))
+            using (PromoteMarker.Auto())
             {
-                state = previousState;
-                RenderState();
-                routingGrid.RebuildFromScene();
-                Debug.LogWarning(
-                    $"Room content generation failed for {promoted.Id}; "
-                    + "the locked Room hint was restored.",
-                    this);
-                return false;
-            }
+                var previousState = state;
+                var promotedPlan = state.NextRoomPlan;
+                var promoted = promotedPlan.Room;
+                state = state.UnlockNext();
+                using (RenderPromotionMarker.Auto())
+                {
+                    RenderPromotion(promotedPlan);
+                }
 
-            RoomUnlocked?.Invoke(promoted);
-            roomContentGeneration?.RedistributeProducts();
-            routingGrid.RebuildFromScene();
-            RoomContentReady?.Invoke(promoted);
-            PlanStoreAndRenderNextHint();
-            return true;
+                using (FinalizeContentMarker.Auto())
+                {
+                    if (!FinalizeRoomContent(promoted))
+                    {
+                        state = previousState;
+                        RenderState();
+                        routingGrid.RebuildFromScene();
+                        Debug.LogWarning(
+                            $"Room content generation failed for {promoted.Id}; "
+                            + "the locked Room hint was restored.",
+                            this);
+                        return false;
+                    }
+                }
+
+                RoomUnlocked?.Invoke(promoted);
+                using (RedistributeMarker.Auto())
+                {
+                    roomContentGeneration?.RedistributeProducts();
+                }
+
+                routingGrid.RebuildFromScene();
+                RoomContentReady?.Invoke(promoted);
+                using (PlanHintMarker.Auto())
+                {
+                    PlanStoreAndRenderNextHint();
+                }
+
+                return true;
+            }
         }
 
         private bool FinalizeRoomContent(RoomPlacement room)
         {
-            // The promoted Room geometry must be present in the grid before
-            // content placement queries it. A second rebuild below is the
-            // authoritative post-content snapshot used by Plug routing.
+            // Promoted geometry must be present before content placement queries it.
+            // The caller performs one authoritative post-redistribution rebuild.
             routingGrid.RebuildFromScene();
             roomContentGeneration ??=
                 GetComponent<RoomContentGenerationController>();
@@ -178,7 +206,6 @@ namespace Octoplug.RoomGeneration.Unity
                 return false;
             }
 
-            routingGrid.RebuildFromScene();
             return true;
         }
 
@@ -250,8 +277,27 @@ namespace Octoplug.RoomGeneration.Unity
             }
 
             state = state.StoreNextPlan(result.Plan);
-            RenderState();
+            RenderNextHint(result.Plan.Room);
             NextHintCreated?.Invoke(state.NextRoomPlan.Room);
+        }
+
+        private void RenderPromotion(RoomPlan promotedPlan)
+        {
+            var binder = EnsureBinder(promotedPlan.Room);
+            binder.ApplyPlacement(
+                promotedPlan.Room,
+                state.GetVisualIntent(promotedPlan.Room.Id));
+            for (var i = 0; i < promotedPlan.DoorPlans.Count; i++)
+            {
+                RenderDoor(promotedPlan.DoorPlans[i]);
+            }
+        }
+
+        private void RenderNextHint(RoomPlacement hint)
+        {
+            EnsureBinder(hint).ApplyPlacement(
+                hint,
+                state.GetVisualIntent(hint.Id));
         }
 
         private void RenderState()
