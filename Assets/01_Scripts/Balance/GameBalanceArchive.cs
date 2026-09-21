@@ -67,11 +67,16 @@ namespace Octoplug.Balance
     [Serializable]
     public struct RewardSheetRow {
         public string rewardId;
-        public string targetType;
-        public string effectType;
-        public int effectValue;
-        public int weight;
+        public bool enabled;
         public int minRoomCount;
+        public int weight;
+        public string displayName;
+        public string description;
+        public string targetType;
+        public string effect1Type;
+        public int effect1Value;
+        public string effect2Type;
+        public int effect2Value;
     }
 
     [Serializable]

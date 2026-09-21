@@ -14,17 +14,26 @@ namespace Octoplug.Reward
                 foreach (var row in archive.RewardRows)
                 {
                     RewardTargetType targetType = System.Enum.TryParse<RewardTargetType>(row.targetType, true, out var tType) ? tType : RewardTargetType.None;
-                    RewardEffectType effectType = System.Enum.TryParse<RewardEffectType>(row.effectType, true, out var eType) ? eType : RewardEffectType.HouseAllowedPower;
                     
+                    var effects = new List<RewardEffect>();
+                    if (!string.IsNullOrWhiteSpace(row.effect1Type) && System.Enum.TryParse<RewardEffectType>(row.effect1Type, true, out var e1Type))
+                    {
+                        effects.Add(new RewardEffect(e1Type, row.effect1Value));
+                    }
+                    if (!string.IsNullOrWhiteSpace(row.effect2Type) && System.Enum.TryParse<RewardEffectType>(row.effect2Type, true, out var e2Type))
+                    {
+                        effects.Add(new RewardEffect(e2Type, row.effect2Value));
+                    }
+
                     list.Add(new RewardBalanceRecord(
                         row.rewardId,
-                        true,
+                        row.enabled,
                         row.minRoomCount,
                         row.weight,
-                        row.rewardId,
-                        string.Empty,
+                        row.displayName,
+                        row.description,
                         targetType,
-                        new[] { new RewardEffect(effectType, row.effectValue) }
+                        effects
                     ));
                 }
             }
