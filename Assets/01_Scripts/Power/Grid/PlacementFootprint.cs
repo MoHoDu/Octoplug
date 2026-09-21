@@ -231,12 +231,17 @@ namespace Octoplug.Power.Grid
 
         private Bounds GetFixedWorldBounds()
         {
-            if (boundsCollider != null)
+            if (boundsCollider is BoxCollider2D boxCollider)
+            {
+                return GetAuthoredWorldBounds(boxCollider);
+            }
+
+            if (boundsCollider != null && boundsCollider.gameObject.activeInHierarchy)
             {
                 return boundsCollider.bounds;
             }
 
-            if (boundsRenderer != null)
+            if (boundsRenderer != null && boundsRenderer.gameObject.activeInHierarchy)
             {
                 return boundsRenderer.bounds;
             }

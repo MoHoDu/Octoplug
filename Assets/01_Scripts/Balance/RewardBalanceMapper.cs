@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Octoplug.Balance;
+using UnityEngine;
 
 namespace Octoplug.Reward
 {
@@ -9,35 +11,62 @@ namespace Octoplug.Reward
         {
             var list = new List<RewardBalanceRecord>();
             var archive = BalanceRegistry.Instance;
-            if (archive != null)
+            if (archive == null)
             {
-                foreach (var row in archive.RewardRows)
-                {
-                    RewardTargetType targetType = System.Enum.TryParse<RewardTargetType>(row.targetType, true, out var tType) ? tType : RewardTargetType.None;
-                    
-                    var effects = new List<RewardEffect>();
-                    if (!string.IsNullOrWhiteSpace(row.effect1Type) && System.Enum.TryParse<RewardEffectType>(row.effect1Type, true, out var e1Type))
-                    {
-                        effects.Add(new RewardEffect(e1Type, row.effect1Value));
-                    }
-                    if (!string.IsNullOrWhiteSpace(row.effect2Type) && System.Enum.TryParse<RewardEffectType>(row.effect2Type, true, out var e2Type))
-                    {
-                        effects.Add(new RewardEffect(e2Type, row.effect2Value));
-                    }
-
-                    list.Add(new RewardBalanceRecord(
-                        row.rewardId,
-                        row.enabled,
-                        row.minRoomCount,
-                        row.weight,
-                        row.displayName,
-                        row.description,
-                        targetType,
-                        effects
-                    ));
-                }
+                return list;
             }
+
+            foreach (var row in archive.RewardRows)
+            {
+                var targetType = Enum.TryParse<RewardTargetType>(
+                    row.targetType,
+                    true,
+                    out var parsedTargetType)
+                    ? parsedTargetType
+                    : RewardTargetType.None;
+
+                var effects = new List<RewardEffect>(2);
+                if (!TryAddEffect(effects, row.effect1Type, row.effect1Value)
+                    || !TryAddEffect(effects, row.effect2Type, row.effect2Value)
+                    || effects.Count == 0)
+                {
+                    Debug.LogWarning(
+                        $"[Balance] Reward '{row.rewardId}' was skipped because its effects are not supported by the current runtime.");
+                    continue;
+                }
+
+                list.Add(new RewardBalanceRecord(
+                    row.rewardId,
+                    row.enabled,
+                    row.minRoomCount,
+                    row.weight,
+                    row.displayName,
+                    row.description,
+                    targetType,
+                    effects));
+            }
+
             return list;
+        }
+
+        private static bool TryAddEffect(
+            ICollection<RewardEffect> effects,
+            string effectType,
+            int effectValue)
+        {
+            if (string.IsNullOrWhiteSpace(effectType))
+            {
+                return true;
+            }
+
+            if (!Enum.TryParse<RewardEffectType>(effectType, true, out var parsedType)
+                || effectValue <= 0)
+            {
+                return false;
+            }
+
+            effects.Add(new RewardEffect(parsedType, effectValue));
+            return true;
         }
     }
 }

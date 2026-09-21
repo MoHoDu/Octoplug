@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using Octoplug.Balance;
 using Octoplug.Power.Grid;
 using Octoplug.RoomGeneration;
 using Octoplug.RoomGeneration.Unity;
+using UnityEditor;
 using UnityEngine;
 
 namespace Octoplug.Tests.Editor.RoomGeneration
@@ -159,10 +161,150 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             Assert.That(finalFailure, Does.Contain("reservations"));
         }
 
-        private static RoomPlacement CreateRoom(float x, float y, float width, float height)
+        [TestCase("Assets/03_Prefabs/Products/Fan.prefab")]
+        [TestCase("Assets/03_Prefabs/Products/Heater.prefab")]
+        [TestCase("Assets/03_Prefabs/Products/Air_Conditioner.prefab")]
+        public void InactiveProductionPrefabKeepsAuthoredBoundsAtCandidatePosition(
+            string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null);
+            var gameObject = Object.Instantiate(prefab);
+            createdObjects.Add(gameObject);
+            var footprint = gameObject.GetComponent<PlacementFootprint>();
+            Assert.That(footprint, Is.Not.Null);
+            gameObject.SetActive(false);
+
+            var sourceBounds = footprint.GetWorldBounds(0, Vector2.zero);
+            var bounds = footprint.GetWorldBounds(0, new Vector2(4f, 3f));
+
+            Assert.That(bounds.size.x, Is.GreaterThan(0.9f));
+            Assert.That(bounds.size.y, Is.GreaterThan(0.9f));
+            Assert.That(bounds.size, Is.EqualTo(sourceBounds.size));
+            Assert.That(
+                (Vector2)(bounds.center - sourceBounds.center),
+                Is.EqualTo(new Vector2(4f, 3f)));
+        }
+
+        [Test]
+        public void InactiveLargeFootprintsReserveDisjointCells()
+        {
+            var room = CreateRoom(0f, 0f, 3f, 2f);
+            var grid = new CableRoutingGrid(0.25f);
+            grid.MarkArea(
+                new Bounds(new Vector3(1.5f, 1f), new Vector3(3f, 2f, 0f)),
+                GridCellState.Walkable);
+            var first = CreateFootprint(new Vector2(0.96f, 0.96f));
+            var second = CreateFootprint(new Vector2(0.96f, 0.96f));
+            first.gameObject.SetActive(false);
+            second.gameObject.SetActive(false);
+
+            Assert.That(RoomObjectPlacementPlanner.TryFindPosition(
+                room, grid, first, 0, out var firstPosition, out var firstFailure),
+                Is.True,
+                firstFailure);
+            Assert.That(first.TryReserveAt(grid, firstPosition, 0), Is.True);
+            Assert.That(RoomObjectPlacementPlanner.TryFindPosition(
+                room, grid, second, 0, out var secondPosition, out var secondFailure),
+                Is.True,
+                secondFailure);
+            Assert.That(second.TryReserveAt(grid, secondPosition, 0), Is.True);
+
+            var firstBounds = first.GetWorldBounds(0, firstPosition);
+            var secondBounds = second.GetWorldBounds(0, secondPosition);
+            var overlapX = Mathf.Min(firstBounds.max.x, secondBounds.max.x)
+                - Mathf.Max(firstBounds.min.x, secondBounds.min.x);
+            var overlapY = Mathf.Min(firstBounds.max.y, secondBounds.max.y)
+                - Mathf.Max(firstBounds.min.y, secondBounds.min.y);
+            Assert.That(overlapX > 0f && overlapY > 0f, Is.False);
+        }
+
+        [Test]
+        public void RedistributionTargetsPreferFewerProductsThenLargerArea()
+        {
+            var smallEmpty = CreateRoom(0f, 0f, 2f, 2f, "small-empty");
+            var largeEmpty = CreateRoom(3f, 0f, 4f, 3f, "large-empty");
+            var occupied = CreateRoom(8f, 0f, 6f, 4f, "occupied");
+            var counts = new Dictionary<RoomId, int>
+            {
+                [smallEmpty.Id] = 0,
+                [largeEmpty.Id] = 0,
+                [occupied.Id] = 1
+            };
+
+            var selected = RoomContentGenerationController.SelectTargetRooms(
+                new[] { smallEmpty, occupied, largeEmpty },
+                2,
+                roomId => counts[roomId]);
+
+            Assert.That(selected, Has.Count.EqualTo(2));
+            Assert.That(selected[0].Id, Is.EqualTo(largeEmpty.Id));
+            Assert.That(selected[1].Id, Is.EqualTo(smallEmpty.Id));
+            Assert.That(selected[0].Id, Is.Not.EqualTo(selected[1].Id));
+        }
+
+        [TestCase(0, 0)]
+        [TestCase(1, 0)]
+        [TestCase(2, 1)]
+        [TestCase(4, 1)]
+        [TestCase(5, 2)]
+        public void ProductPoolSelectionUsesHalfOpenCumulativeIntervals(int roll, int expectedIndex)
+        {
+            var pool = new[]
+            {
+                new ProductSpawnPoolSheetRow { productType = "Fan", weight = 2 },
+                new ProductSpawnPoolSheetRow { productType = "TV", weight = 3 },
+                new ProductSpawnPoolSheetRow { productType = "Heater", weight = 1 }
+            };
+
+            Assert.That(
+                RoomContentGenerationController.SelectProductIndexFromPool(pool, roll),
+                Is.EqualTo(expectedIndex));
+        }
+
+        [Test]
+        public void AcceptedReservationsKeepLargeFootprintsDisjoint()
+        {
+            var room = CreateRoom(0f, 0f, 6f, 3f);
+            var grid = CreateGrid(room);
+            var first = CreateFootprint(new Vector2(2f, 2f));
+            var second = CreateFootprint(new Vector2(2f, 2f));
+
+            Assert.That(RoomObjectPlacementPlanner.TryFindPosition(
+                room,
+                grid,
+                first,
+                0,
+                out var firstPosition,
+                out var firstFailure), Is.True, firstFailure);
+            Assert.That(first.TryReserveAt(grid, firstPosition, 0), Is.True);
+            Assert.That(RoomObjectPlacementPlanner.TryFindPosition(
+                room,
+                grid,
+                second,
+                0,
+                out var secondPosition,
+                out var secondFailure), Is.True, secondFailure);
+            Assert.That(second.TryReserveAt(grid, secondPosition, 0), Is.True);
+
+            var firstBounds = first.GetWorldBounds(0, firstPosition);
+            var secondBounds = second.GetWorldBounds(0, secondPosition);
+            var overlapX = Mathf.Min(firstBounds.max.x, secondBounds.max.x)
+                - Mathf.Max(firstBounds.min.x, secondBounds.min.x);
+            var overlapY = Mathf.Min(firstBounds.max.y, secondBounds.max.y)
+                - Mathf.Max(firstBounds.min.y, secondBounds.min.y);
+            Assert.That(overlapX > 0f && overlapY > 0f, Is.False);
+        }
+
+        private static RoomPlacement CreateRoom(
+            float x,
+            float y,
+            float width,
+            float height,
+            string id = "placement-test")
         {
             return new RoomPlacement(
-                new RoomId("placement-test"),
+                new RoomId(id),
                 new RoomBounds2D(x, y, width, height));
         }
 

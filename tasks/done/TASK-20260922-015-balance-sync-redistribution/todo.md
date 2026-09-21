@@ -1,0 +1,8 @@
+- [x] Create ScriptableObjects for Balance Data
+- [x] Implement Editor Google Sheet Sync
+- [x] Migrate Runtime Consumers to Local Balance
+- [x] Implement exact-one base Product and Wall Outlet generation
+- [x] Implement Product Redistribution
+- [x] Make failed room promotion restore the locked hint
+- [x] Add focused automated tests
+- [x] Complete human Play Mode verification for Rooms 1-5

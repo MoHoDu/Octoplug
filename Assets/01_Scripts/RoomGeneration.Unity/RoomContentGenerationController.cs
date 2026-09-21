@@ -29,22 +29,6 @@ namespace Octoplug.RoomGeneration.Unity
         [SerializeField] private string generatedWallOutletWalls;
         [SerializeField] private string wallOutletPlacementWarning;
 
-        private void OnEnable()
-        {
-            if (roomGeneration != null)
-            {
-                roomGeneration.RoomUnlocked += HandleRoomUnlocked;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (roomGeneration != null)
-            {
-                roomGeneration.RoomUnlocked -= HandleRoomUnlocked;
-            }
-        }
-
         private void EnsureHousePowerBudget()
         {
             if (housePowerBudget == null)
@@ -63,32 +47,26 @@ namespace Octoplug.RoomGeneration.Unity
             return housePowerBudget != null ? housePowerBudget.AllowedPowerWatts : 10f;
         }
 
-        private bool IsConfigPowerFeasible(RoomConfigRecord config, float housePower)
-        {
-            if (config.TvCount > 0 && tvPrefab != null && tvPrefab.PowerConsumptionWatts > housePower) return false;
-            if (config.FanCount > 0 && fanPrefab != null && fanPrefab.PowerConsumptionWatts > housePower) return false;
-            if (config.HeaterCount > 0 && heaterPrefab != null && heaterPrefab.PowerConsumptionWatts > housePower) return false;
-            if (config.InductionCount > 0 && inductionPrefab != null && inductionPrefab.PowerConsumptionWatts > housePower) return false;
-            if (config.AirConditionerCount > 0 && airConditionerPrefab != null && airConditionerPrefab.PowerConsumptionWatts > housePower) return false;
-            return true;
-        }
-
-        private void HandleRoomUnlocked(RoomPlacement newRoom)
+        public void RedistributeProducts()
         {
             var archive = BalanceRegistry.Instance;
             if (archive == null) return;
 
             int roomCount = roomGeneration.State.UnlockedLayout.Rooms.Count;
-            var rule = archive.ProductRedistributionRows.FirstOrDefault(r => roomCount >= r.minRoomCount && roomCount <= r.maxRoomCount);
+            if (roomCount < 4) return;
 
-            if (rule.minRoomCount == 0) return; // Not found
+            var matchingRules = archive.ProductRedistributionRows
+                .Where(r => roomCount >= r.minRoomCount && roomCount <= r.maxRoomCount)
+                .ToList();
+            if (matchingRules.Count != 1) return;
 
+            var rule = matchingRules[0];
             int extraProducts = UnityEngine.Random.Range(rule.minExtraProducts, rule.maxExtraProducts + 1);
             if (extraProducts <= 0) return;
 
             float housePower = GetHouseAllowedPower();
             var validPool = archive.ProductSpawnPoolRows
-                .Where(p => p.enabled && p.minRoomCount <= roomCount && IsProductPowerFeasible(p.productType, housePower))
+                .Where(p => p.enabled && p.weight > 0 && p.minRoomCount <= roomCount && IsProductPowerFeasible(p.productType, housePower))
                 .ToList();
 
             if (validPool.Count == 0) return;
@@ -96,30 +74,44 @@ namespace Octoplug.RoomGeneration.Unity
             var gridService = CableRoutingGridService.Instance;
             if (gridService == null) return;
             var grid = gridService.Grid;
-
-            var usedRooms = new HashSet<RoomId>();
+            var targetRooms = SelectTargetRooms(roomGeneration.State.UnlockedLayout.Rooms, extraProducts);
             int placed = 0;
 
-            for (int i = 0; i < extraProducts; i++)
+            for (int i = 0; i < targetRooms.Count; i++)
             {
-                var targetRoom = SelectTargetRoom(rule.distinctRoomPerProduct, usedRooms);
-                if (!targetRoom.IsValid) break;
-
-                var productType = SelectProductFromPool(validPool);
-                var prefab = GetPrefab(productType);
-
-                if (prefab != null)
+                var targetRoom = targetRooms[i];
+                var roomPool = new List<ProductSpawnPoolSheetRow>(validPool);
+                while (roomPool.Count > 0)
                 {
-                    if (TryPlaceExtraProduct(prefab, targetRoom, grid))
+                    int selectedIndex = SelectProductIndexFromPool(
+                        roomPool,
+                        UnityEngine.Random.Range(0, roomPool.Sum(p => p.weight)));
+                    var selected = roomPool[selectedIndex];
+                    var prefab = GetPrefab(selected.productType);
+                    if (prefab != null
+                        && TryPlaceProduct(
+                            prefab,
+                            targetRoom,
+                            grid,
+                            generatedObjects: null,
+                            out _))
                     {
                         placed++;
-                        usedRooms.Add(targetRoom.Id);
+                        break;
                     }
-                    else
-                    {
-                        Debug.LogWarning($"[Redistribution] Failed to place {productType} in Room {targetRoom.Id}.");
-                    }
+
+                    roomPool.RemoveAt(selectedIndex);
                 }
+
+                if (roomPool.Count == 0)
+                {
+                    Debug.LogWarning($"[Redistribution] No eligible Product could be placed in Room {targetRoom.Id}.");
+                }
+            }
+
+            if (targetRooms.Count < extraProducts)
+            {
+                Debug.LogWarning($"[Redistribution] Requested {extraProducts} distinct Rooms, but only {targetRooms.Count} were available.");
             }
 
             if (placed < extraProducts)
@@ -128,39 +120,25 @@ namespace Octoplug.RoomGeneration.Unity
             }
         }
 
-        private RoomPlacement SelectTargetRoom(bool distinct, HashSet<RoomId> usedRooms)
+        public static List<RoomPlacement> SelectTargetRooms(
+            IReadOnlyList<RoomPlacement> rooms,
+            int count,
+            Func<RoomId, int> productCount = null)
         {
-            var allRooms = roomGeneration.State.UnlockedLayout.Rooms;
-            var candidates = new List<RoomPlacement>();
-            var weights = new List<float>();
-            float totalWeight = 0f;
-
-            foreach (var room in allRooms)
-            {
-                if (distinct && usedRooms.Contains(room.Id)) continue;
-
-                float area = (room.Bounds.MaxX - room.Bounds.MinX) * (room.Bounds.MaxY - room.Bounds.MinY);
-                int currentProducts = CountActiveProductsInRoom(room.Id);
-                float weight = area / (currentProducts + 1);
-
-                candidates.Add(room);
-                weights.Add(weight);
-                totalWeight += weight;
-            }
-
-            if (candidates.Count == 0) return default;
-
-            float roll = UnityEngine.Random.Range(0f, totalWeight);
-            float currentWeight = 0f;
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                currentWeight += weights[i];
-                if (roll <= currentWeight) return candidates[i];
-            }
-            return candidates[0];
+            if (rooms == null || count <= 0) return new List<RoomPlacement>();
+            productCount ??= CountActiveProductsInRoom;
+            return rooms
+                .OrderBy(room => productCount(room.Id))
+                .ThenByDescending(RoomArea)
+                .ThenBy(room => room.Id)
+                .Take(count)
+                .ToList();
         }
 
-        private int CountActiveProductsInRoom(RoomId roomId)
+        private static float RoomArea(RoomPlacement room) =>
+            room.Bounds.Width * room.Bounds.Height;
+
+        private static int CountActiveProductsInRoom(RoomId roomId)
         {
             int count = 0;
             foreach (var product in RuntimeWorldRegistry.GetProducts())
@@ -173,17 +151,29 @@ namespace Octoplug.RoomGeneration.Unity
             return count;
         }
 
-        private string SelectProductFromPool(List<ProductSpawnPoolSheetRow> pool)
+        public static int SelectProductIndexFromPool(
+            IReadOnlyList<ProductSpawnPoolSheetRow> pool,
+            int roll)
         {
-            int totalWeight = pool.Sum(p => p.weight);
-            int roll = UnityEngine.Random.Range(0, totalWeight);
-            int current = 0;
-            foreach (var p in pool)
+            if (pool == null || pool.Count == 0)
             {
-                current += p.weight;
-                if (roll <= current) return p.productType;
+                throw new ArgumentException("Product pool must not be empty.", nameof(pool));
             }
-            return pool[0].productType;
+
+            int totalWeight = pool.Sum(p => p.weight);
+            if (roll < 0 || roll >= totalWeight)
+            {
+                throw new ArgumentOutOfRangeException(nameof(roll));
+            }
+
+            int current = 0;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                current += pool[i].weight;
+                if (roll < current) return i;
+            }
+
+            throw new InvalidOperationException("Product pool weights are invalid.");
         }
 
         private ApplianceSource GetPrefab(string type)
@@ -204,12 +194,26 @@ namespace Octoplug.RoomGeneration.Unity
             return prefab.PowerConsumptionWatts <= housePower;
         }
 
-        private bool TryPlaceExtraProduct(ApplianceSource prefab, RoomPlacement room, CableRoutingGrid grid)
+        private bool TryPlaceProduct(
+            ApplianceSource prefab,
+            RoomPlacement room,
+            CableRoutingGrid grid,
+            ICollection<GameObject> generatedObjects,
+            out string failure)
         {
             var productParent = GameObject.Find("Products")?.transform;
-            var instance = RuntimeEquipmentFactory.Stage(prefab.gameObject, Vector2.zero, Quaternion.identity, productParent);
-            var footprint = instance != null ? instance.GetComponent<PlacementFootprint>() : null;
-            var product = instance != null ? instance.GetComponent<ApplianceSource>() : null;
+            var instance = RuntimeEquipmentFactory.Stage(
+                prefab.gameObject,
+                Vector2.zero,
+                Quaternion.identity,
+                productParent);
+            var footprint = instance != null
+                ? instance.GetComponent<PlacementFootprint>()
+                : null;
+            var product = instance != null
+                ? instance.GetComponent<ApplianceSource>()
+                : null;
+            var candidateFailure = "no placement candidate was accepted";
 
             bool found = RoomObjectPlacementPlanner.TryFindPosition(
                 room,
@@ -220,64 +224,92 @@ namespace Octoplug.RoomGeneration.Unity
                 {
                     instance.transform.position = candidate;
                     Physics2D.SyncTransforms();
-                    if (OverlapsPlacementObject(footprint, bounds)) return false;
-                    if (!CanReachWallOutlet(product, room, grid)) return false;
+                    if (OverlapsPlacementObject(footprint, bounds))
+                    {
+                        candidateFailure =
+                            "all otherwise valid positions overlap a Product or PowerStrip";
+                        return false;
+                    }
+
+                    if (!CanReachWallOutlet(product, room, grid))
+                    {
+                        candidateFailure =
+                            "no usable room Wall Outlet socket is reachable within the Product's initial CableLength";
+                        return false;
+                    }
+
                     return true;
                 },
                 out var spawnPosition,
-                out var failure);
+                out failure);
 
             if (!found)
             {
+                if (!string.IsNullOrEmpty(candidateFailure))
+                {
+                    failure = candidateFailure;
+                }
+
                 RuntimeEquipmentFactory.Abort(instance);
                 return false;
             }
 
             instance.transform.position = spawnPosition;
-            ResolveOverlap(instance, room);
-            return RuntimeEquipmentFactory.TryFinalizeProduct(instance, room.Id, grid, out _, out _);
+            if (!RuntimeEquipmentFactory.TryFinalizeProduct(
+                    instance,
+                    room.Id,
+                    grid,
+                    out _,
+                    out failure))
+            {
+                return false;
+            }
+
+            generatedObjects?.Add(instance);
+            return true;
         }
 
         public bool GenerateRoomContent(RoomPlacement room)
         {
+            const int requiredProductCount = 1;
             var roomCount = roomGeneration.State.UnlockedLayout.Rooms.Count;
-            int? tvCount = 0;
-            int? fanCount = 0;
-            int? heaterCount = 0;
-            int? inductionCount = 0;
-            int? airConditionerCount = 0;
             int wallOutletSocketMin = 1;
             int wallOutletSocketMax = 2;
-            string configId = string.Empty;
+            string configId;
+            ApplianceSource starterProduct = null;
+            bool isStarterRoom = roomCount <= 2;
 
-            if (roomCount <= 2)
+            if (isStarterRoom)
             {
-                var starters = Octoplug.RoomGeneration.RoomContentBalanceMapper.GetStarterConfigs();
-                var starter = starters.FirstOrDefault(s => s.StarterRoomIndex == roomCount && s.Enabled);
-                if (starter != null)
+                var starter = Octoplug.RoomGeneration.RoomContentBalanceMapper
+                    .GetStarterConfigs()
+                    .FirstOrDefault(s =>
+                        s.StarterRoomIndex == roomCount && s.Enabled);
+                if (starter == null)
                 {
-                    tvCount = starter.TvCount;
-                    fanCount = starter.FanCount;
-                    heaterCount = starter.HeaterCount;
-                    inductionCount = starter.InductionCount;
-                    airConditionerCount = starter.AirConditionerCount;
-                    wallOutletSocketMin = starter.WallOutletSocketMin;
-                    wallOutletSocketMax = starter.WallOutletSocketMax;
-                    configId = "starter-" + starter.StarterRoomIndex;
+                    Debug.LogWarning(
+                        $"[RoomContent] No enabled StarterConfig found for Room {roomCount}.",
+                        this);
+                    return false;
                 }
+
+                starterProduct = GetStarterProductPrefab(starter);
+                wallOutletSocketMin = starter.WallOutletSocketMin;
+                wallOutletSocketMax = starter.WallOutletSocketMax;
+                configId = "starter-" + starter.StarterRoomIndex;
             }
-
-            if (string.IsNullOrEmpty(configId))
+            else
             {
-                var housePower = GetHouseAllowedPower();
-                var configs = Octoplug.RoomGeneration.RoomContentBalanceMapper.GetDefaultConfigs()
+                var configs = Octoplug.RoomGeneration.RoomContentBalanceMapper
+                    .GetDefaultConfigs()
                     .Where(c => c.Enabled && c.MinRoomCount <= roomCount)
-                    .Where(c => IsConfigPowerFeasible(c, housePower))
                     .ToList();
-
                 if (configs.Count == 0)
                 {
-                    Debug.LogWarning($"[RoomContent] No eligible RoomConfig found for room {room.Id} (RoomCount: {roomCount}, Power: {housePower}).", this);
+                    Debug.LogWarning(
+                        $"[RoomContent] No eligible RoomConfig found for Room {room.Id} "
+                        + $"(RoomCount: {roomCount}).",
+                        this);
                     return false;
                 }
 
@@ -295,11 +327,6 @@ namespace Octoplug.RoomGeneration.Unity
                     }
                 }
 
-                tvCount = selectedConfig.TvCount;
-                fanCount = selectedConfig.FanCount;
-                heaterCount = selectedConfig.HeaterCount;
-                inductionCount = selectedConfig.InductionCount;
-                airConditionerCount = selectedConfig.AirConditionerCount;
                 wallOutletSocketMin = selectedConfig.WallOutletSocketMin;
                 wallOutletSocketMax = selectedConfig.WallOutletSocketMax;
                 configId = selectedConfig.Id;
@@ -312,7 +339,6 @@ namespace Octoplug.RoomGeneration.Unity
             }
 
             var grid = gridService.Grid;
-
             generatedProductCount = 0;
             generatedWallOutletCount = 0;
             generatedWallOutletWalls = string.Empty;
@@ -320,74 +346,167 @@ namespace Octoplug.RoomGeneration.Unity
             lastSelectedRoomConfigId = configId;
 
             var generatedObjects = new List<GameObject>();
-            generatedWallOutletCount = SpawnWallOutlets(RequiredWallOutletCount, wallOutletSocketMin, wallOutletSocketMax, room, generatedObjects);
+            generatedWallOutletCount = SpawnWallOutlets(
+                RequiredWallOutletCount,
+                wallOutletSocketMin,
+                wallOutletSocketMax,
+                room,
+                generatedObjects);
             if (generatedWallOutletCount != RequiredWallOutletCount)
             {
-                if (string.IsNullOrEmpty(wallOutletPlacementWarning)) wallOutletPlacementWarning = "required Wall Outlet was not finalized";
-                Debug.LogWarning($"[RoomContentRequiredInfrastructure]\nRoom: {room.Id}\nConfig: {configId}\nRequested: {RequiredWallOutletCount}\nPlaced: {generatedWallOutletCount}\nReason: {wallOutletPlacementWarning}", this);
+                if (string.IsNullOrEmpty(wallOutletPlacementWarning))
+                {
+                    wallOutletPlacementWarning =
+                        "required Wall Outlet was not finalized";
+                }
+
+                Debug.LogWarning(
+                    $"[RoomContentRequiredInfrastructure]\nRoom: {room.Id}\nConfig: {configId}"
+                    + $"\nRequested: {RequiredWallOutletCount}\nPlaced: {generatedWallOutletCount}"
+                    + $"\nReason: {wallOutletPlacementWarning}",
+                    this);
+                RollBackRoomContent(generatedObjects);
                 return false;
             }
 
-            generatedProductCount += SpawnProduct(tvPrefab, tvCount.Value, room, grid, generatedObjects);
-            generatedProductCount += SpawnProduct(fanPrefab, fanCount.Value, room, grid, generatedObjects);
-            generatedProductCount += SpawnProduct(heaterPrefab, heaterCount.Value, room, grid, generatedObjects);
-            generatedProductCount += SpawnProduct(inductionPrefab, inductionCount.Value, room, grid, generatedObjects);
-            generatedProductCount += SpawnProduct(airConditionerPrefab, airConditionerCount.Value, room, grid, generatedObjects);
-
-            var requestedProductCount = tvCount.Value + fanCount.Value + heaterCount.Value + inductionCount.Value + airConditionerCount.Value;
-            if (generatedProductCount != requestedProductCount)
+            string productFailure = "required Product was not finalized";
+            if (isStarterRoom && starterProduct == null)
             {
-                Debug.LogWarning($"[RoomContentProductShortfall]\nRoom: {room.Id}\nConfig: {configId}\nRequested: {requestedProductCount}\nPlaced: {generatedProductCount}\nReason: selected RoomConfig could not be placed exactly", this);
-                RollBackGeneratedObjects(generatedObjects);
-                generatedProductCount = 0;
-                generatedWallOutletCount = 0;
-                generatedWallOutletWalls = string.Empty;
+                productFailure =
+                    "StarterConfig must define exactly one supported Product";
+            }
+            else if (starterProduct != null)
+            {
+                if (starterProduct.PowerConsumptionWatts <= GetHouseAllowedPower()
+                    && TryPlaceProduct(
+                        starterProduct,
+                        room,
+                        grid,
+                        generatedObjects,
+                        out productFailure))
+                {
+                    generatedProductCount = 1;
+                }
+                else if (starterProduct.PowerConsumptionWatts > GetHouseAllowedPower())
+                {
+                    productFailure =
+                        "Starter Product exceeds the current House power budget";
+                }
+            }
+            else
+            {
+                generatedProductCount = TryPlaceBaseProductFromPool(
+                    room,
+                    roomCount,
+                    grid,
+                    generatedObjects,
+                    out productFailure)
+                    ? 1
+                    : 0;
+            }
+
+            if (generatedProductCount != requiredProductCount)
+            {
+                Debug.LogWarning(
+                    $"[RoomContentProductShortfall]\nRoom: {room.Id}\nConfig: {configId}"
+                    + $"\nRequested: {requiredProductCount}\nPlaced: {generatedProductCount}"
+                    + $"\nReason: {productFailure}",
+                    this);
+                RollBackRoomContent(generatedObjects);
                 return false;
             }
 
-            Debug.Log($"[RoomContent]\nRoom: {room.Id}\nConfig: {configId}\nProducts Generated: {generatedProductCount}\nWallOutlets Generated: {generatedWallOutletCount}\nOutlet Walls: {(string.IsNullOrEmpty(generatedWallOutletWalls) ? "None" : generatedWallOutletWalls)}", this);
-
+            Debug.Log(
+                $"[RoomContent]\nRoom: {room.Id}\nConfig: {configId}"
+                + $"\nProducts Generated: {generatedProductCount}"
+                + $"\nWallOutlets Generated: {generatedWallOutletCount}"
+                + $"\nOutlet Walls: {(string.IsNullOrEmpty(generatedWallOutletWalls) ? "None" : generatedWallOutletWalls)}",
+                this);
             return true;
         }
 
-        private int SpawnProduct(ApplianceSource prefab, int count, RoomPlacement room, CableRoutingGrid grid, List<GameObject> generatedObjects)
+        private ApplianceSource GetStarterProductPrefab(
+            Octoplug.RoomGeneration.StarterRoomConfigRecord starter)
         {
-            if (count <= 0) return 0;
-            if (prefab == null) return 0;
+            var products = new List<ApplianceSource>(5);
+            AddStarterProduct(products, tvPrefab, starter.TvCount);
+            AddStarterProduct(products, fanPrefab, starter.FanCount);
+            AddStarterProduct(products, heaterPrefab, starter.HeaterCount);
+            AddStarterProduct(products, inductionPrefab, starter.InductionCount);
+            AddStarterProduct(
+                products,
+                airConditionerPrefab,
+                starter.AirConditionerCount);
+            return products.Count == 1 ? products[0] : null;
+        }
 
-            var productParent = GameObject.Find("Products")?.transform;
-            var spawned = 0;
-            var failure = "no placement attempt was made";
-            for (var i = 0; i < count; i++)
+        private static void AddStarterProduct(
+            ICollection<ApplianceSource> products,
+            ApplianceSource prefab,
+            int count)
+        {
+            if (count == 1 && prefab != null)
             {
-                var instance = RuntimeEquipmentFactory.Stage(prefab.gameObject, Vector2.zero, Quaternion.identity, productParent);
-                var footprint = instance != null ? instance.GetComponent<PlacementFootprint>() : null;
-                var product = instance != null ? instance.GetComponent<ApplianceSource>() : null;
-                var candidateFailure = failure;
-                if (!RoomObjectPlacementPlanner.TryFindPosition(room, grid, footprint, 0, (candidate, bounds) =>
-                {
-                    instance.transform.position = candidate;
-                    Physics2D.SyncTransforms();
-                    if (OverlapsPlacementObject(footprint, bounds)) { candidateFailure = "all otherwise valid positions overlap a Product or PowerStrip"; return false; }
-                    if (!CanReachWallOutlet(product, room, grid)) { candidateFailure = "no usable room Wall Outlet socket is reachable within the Product's initial CableLength"; return false; }
-                    return true;
-                }, out var spawnPosition, out failure))
-                {
-                    if (!string.IsNullOrEmpty(candidateFailure)) failure = candidateFailure;
-                    RuntimeEquipmentFactory.Abort(instance);
-                    continue;
-                }
+                products.Add(prefab);
+            }
+            else if (count != 0)
+            {
+                products.Add(null);
+                products.Add(null);
+            }
+        }
 
-                instance.transform.position = spawnPosition;
-                ResolveOverlap(instance, room);
-                if (!RuntimeEquipmentFactory.TryFinalizeProduct(instance, room.Id, grid, out _, out failure)) continue;
-
-                generatedObjects.Add(instance);
-                spawned++;
+        private bool TryPlaceBaseProductFromPool(
+            RoomPlacement room,
+            int roomCount,
+            CableRoutingGrid grid,
+            ICollection<GameObject> generatedObjects,
+            out string failure)
+        {
+            var archive = BalanceRegistry.Instance;
+            if (archive == null)
+            {
+                failure = "GameBalanceArchive is unavailable";
+                return false;
             }
 
-            if (spawned < count) Debug.LogWarning($"[RoomContentProductPlacement]\nRoom: {room.Id}\nProduct: {prefab.name}\nRequested: {count}\nPlaced: {spawned}\nReason: {failure}", this);
-            return spawned;
+            float housePower = GetHouseAllowedPower();
+            var pool = archive.ProductSpawnPoolRows
+                .Where(p =>
+                    p.enabled
+                    && p.weight > 0
+                    && p.minRoomCount <= roomCount
+                    && IsProductPowerFeasible(p.productType, housePower))
+                .ToList();
+            if (pool.Count == 0)
+            {
+                failure = "no eligible Product exists in the Product Spawn Pool";
+                return false;
+            }
+
+            failure = "no eligible Product could be placed";
+            while (pool.Count > 0)
+            {
+                int selectedIndex = SelectProductIndexFromPool(
+                    pool,
+                    UnityEngine.Random.Range(0, pool.Sum(p => p.weight)));
+                var selected = pool[selectedIndex];
+                var prefab = GetPrefab(selected.productType);
+                if (prefab != null
+                    && TryPlaceProduct(
+                        prefab,
+                        room,
+                        grid,
+                        generatedObjects,
+                        out failure))
+                {
+                    return true;
+                }
+
+                pool.RemoveAt(selectedIndex);
+            }
+
+            return false;
         }
 
         private int SpawnWallOutlets(int count, int minSockets, int maxSockets, RoomPlacement room, List<GameObject> generatedObjects)
@@ -433,66 +552,29 @@ namespace Octoplug.RoomGeneration.Unity
             return false;
         }
 
-        private void ResolveOverlap(GameObject instance, RoomPlacement room)
-        {
-            var colliders = instance.GetComponentsInChildren<Collider2D>();
-            if (colliders.Length == 0) return;
-
-            for (int iteration = 0; iteration < 15; iteration++)
-            {
-                bool overlapped = false;
-                Physics2D.SyncTransforms();
-                foreach (var col in colliders)
-                {
-                    if (col.isTrigger) continue;
-                    var hits = new List<Collider2D>();
-                    var filter = new ContactFilter2D { useTriggers = false };
-                    Physics2D.OverlapCollider(col, filter, hits);
-
-                    foreach (var hit in hits)
-                    {
-                        if (hit.transform.IsChildOf(instance.transform) || hit.isTrigger) continue;
-                        var dist = Physics2D.Distance(col, hit);
-                        if (dist.isOverlapped)
-                        {
-                            overlapped = true;
-                            var pushDir = dist.normal;
-                            if (pushDir.sqrMagnitude < 0.001f) pushDir = UnityEngine.Random.insideUnitCircle.normalized;
-                            instance.transform.position += (Vector3)(pushDir * (-dist.distance + 0.01f));
-                        }
-                    }
-                }
-                if (!overlapped) break;
-            }
-
-            var pos = instance.transform.position;
-            pos.x = Mathf.Clamp(pos.x, room.Bounds.MinX + 0.5f, room.Bounds.MaxX - 0.5f);
-            pos.y = Mathf.Clamp(pos.y, room.Bounds.MinY + 0.5f, room.Bounds.MaxY - 0.5f);
-            instance.transform.position = pos;
-
-            var footprint = instance.GetComponent<PlacementFootprint>();
-            if (footprint != null)
-            {
-                var service = CableRoutingGridService.Instance;
-                if (service != null && service.Grid != null) footprint.TryReserveAt(service.Grid, pos);
-            }
-        }
-
         private static bool OverlapsPlacementObject(PlacementFootprint candidate, Bounds candidateBounds)
         {
-            const float inset = 0.0001f;
-            var halfWidth = candidateBounds.extents.x - inset;
-            var halfHeight = candidateBounds.extents.y - inset;
-            if (halfWidth <= 0f || halfHeight <= 0f) return false;
-            var hits = Physics2D.OverlapAreaAll(
-                new Vector2(candidateBounds.center.x - halfWidth, candidateBounds.center.y - halfHeight),
-                new Vector2(candidateBounds.center.x + halfWidth, candidateBounds.center.y + halfHeight));
-            for (var i = 0; i < hits.Length; i++)
+            const float tolerance = 0.0001f;
+            foreach (var product in RuntimeWorldRegistry.GetProducts())
             {
-                var other = hits[i] != null ? hits[i].GetComponentInParent<PlacementFootprint>() : null;
-                if (other == null || other == candidate || (other.GetComponent<ApplianceSource>() == null && other.GetComponent<PowerStrip>() == null)) continue;
-                if (HasPositiveAreaOverlap(candidateBounds, other.WorldBounds, inset)) return true;
+                var other = product != null ? product.GetComponent<PlacementFootprint>() : null;
+                if (other != null && other != candidate
+                    && HasPositiveAreaOverlap(candidateBounds, other.WorldBounds, tolerance))
+                {
+                    return true;
+                }
             }
+
+            foreach (var powerStrip in RuntimeWorldRegistry.GetPowerStrips())
+            {
+                var other = powerStrip != null ? powerStrip.GetComponent<PlacementFootprint>() : null;
+                if (other != null && other != candidate
+                    && HasPositiveAreaOverlap(candidateBounds, other.WorldBounds, tolerance))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -503,9 +585,22 @@ namespace Octoplug.RoomGeneration.Unity
             return overlapX > tolerance && overlapY > tolerance;
         }
 
-        private static void RollBackGeneratedObjects(IReadOnlyList<GameObject> generatedObjects)
+        private void RollBackRoomContent(
+            IReadOnlyList<GameObject> generatedObjects)
         {
-            for (var i = generatedObjects.Count - 1; i >= 0; i--) RuntimeEquipmentFactory.Abort(generatedObjects[i]);
+            RollBackGeneratedObjects(generatedObjects);
+            generatedProductCount = 0;
+            generatedWallOutletCount = 0;
+            generatedWallOutletWalls = string.Empty;
+        }
+
+        private static void RollBackGeneratedObjects(
+            IReadOnlyList<GameObject> generatedObjects)
+        {
+            for (var i = generatedObjects.Count - 1; i >= 0; i--)
+            {
+                RuntimeEquipmentFactory.Abort(generatedObjects[i]);
+            }
         }
 
         private static Bounds CalculatePrefabBounds(GameObject prefab)

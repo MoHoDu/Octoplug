@@ -12,7 +12,7 @@ namespace Octoplug.Editor
     public class BalanceSyncWindow : EditorWindow
     {
         private const string SheetId = "1kJR8Hx0QeLGeE-k7W3pLSuOmaEALF7YuoeO7orozj14";
-        private const string ArchivePath = "Assets/02_Resources/Balance/GameBalanceArchive.asset";
+        private const string ArchivePath = "Assets/02_Resources/Resources/Balance/GameBalanceArchive.asset";
 
         private Dictionary<string, string> sheetGids = new Dictionary<string, string>()
         {
@@ -428,9 +428,9 @@ namespace Octoplug.Editor
                 yield break;
             }
 
-            if (!System.IO.Directory.Exists("Assets/02_Resources/Balance"))
+            if (!System.IO.Directory.Exists("Assets/02_Resources/Resources/Balance"))
             {
-                System.IO.Directory.CreateDirectory("Assets/02_Resources/Balance");
+                System.IO.Directory.CreateDirectory("Assets/02_Resources/Resources/Balance");
             }
 
             var existingArchive = AssetDatabase.LoadAssetAtPath<GameBalanceArchive>(ArchivePath);

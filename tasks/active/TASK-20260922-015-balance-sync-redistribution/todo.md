@@ -1,5 +1,0 @@
-- [ ] Create ScriptableObjects for Balance Data
-- [ ] Implement Editor Google Sheet Sync
-- [ ] Migrate Runtime Consumers to Local Balance
-- [ ] Implement Product Redistribution
-- [ ] Add Automated Tests

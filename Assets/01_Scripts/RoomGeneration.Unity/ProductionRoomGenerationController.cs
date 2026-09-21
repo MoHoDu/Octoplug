@@ -99,7 +99,14 @@ namespace Octoplug.RoomGeneration.Unity
             seedRoom.SetAuthoredDoorTemplateVisible(true);
             initialized = true;
 
-            FinalizeRoomContent(seedPlacement);
+            if (!FinalizeRoomContent(seedPlacement))
+            {
+                initialized = false;
+                throw new InvalidOperationException(
+                    $"Required seed Room content generation failed for {seedPlacement.Id}.");
+            }
+
+            RoomContentReady?.Invoke(seedPlacement);
             PlanStoreAndRenderNextHint();
             PromoteCurrentHint();
         }
@@ -132,17 +139,32 @@ namespace Octoplug.RoomGeneration.Unity
                 return false;
             }
 
+            var previousState = state;
             var promoted = state.NextRoomPlan.Room;
             state = state.UnlockNext();
             RenderState();
 
+            if (!FinalizeRoomContent(promoted))
+            {
+                state = previousState;
+                RenderState();
+                routingGrid.RebuildFromScene();
+                Debug.LogWarning(
+                    $"Room content generation failed for {promoted.Id}; "
+                    + "the locked Room hint was restored.",
+                    this);
+                return false;
+            }
+
             RoomUnlocked?.Invoke(promoted);
-            FinalizeRoomContent(promoted);
+            roomContentGeneration?.RedistributeProducts();
+            routingGrid.RebuildFromScene();
+            RoomContentReady?.Invoke(promoted);
             PlanStoreAndRenderNextHint();
             return true;
         }
 
-        private void FinalizeRoomContent(RoomPlacement room)
+        private bool FinalizeRoomContent(RoomPlacement room)
         {
             // The promoted Room geometry must be present in the grid before
             // content placement queries it. A second rebuild below is the
@@ -153,15 +175,11 @@ namespace Octoplug.RoomGeneration.Unity
             if (roomContentGeneration != null
                 && !roomContentGeneration.GenerateRoomContent(room))
             {
-                Debug.LogWarning(
-                    $"Room content generation failed for {room.Id}; " +
-                    "RoomContentReady will not be published.",
-                    this);
-                return;
+                return false;
             }
 
             routingGrid.RebuildFromScene();
-            RoomContentReady?.Invoke(room);
+            return true;
         }
 
         private void PlanStoreAndRenderNextHint()
