@@ -1,0 +1,430 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be3fca25a6d124c4db7d6fd90f52eebe, type: 3}
+  m_Name: GameBalanceArchive
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Balance.GameBalanceArchive
+  DemandRows:
+  - id: D001
+    enabled: 1
+    requiredRoomCount: 1
+    weight: 10
+    firstNeed: Cold
+    secondNeed: 
+    satisfactionFillSeconds: 6
+    patienceFillSeconds: 10
+    experienceReward: 10
+    globalSatisfactionOnSuccess: 5
+    globalSatisfactionOnFailure: -8
+    cooldownSeconds: 6
+  - id: D002
+    enabled: 1
+    requiredRoomCount: 1
+    weight: 10
+    firstNeed: Fun
+    secondNeed: 
+    satisfactionFillSeconds: 6
+    patienceFillSeconds: 10
+    experienceReward: 10
+    globalSatisfactionOnSuccess: 5
+    globalSatisfactionOnFailure: -8
+    cooldownSeconds: 6
+  - id: D003
+    enabled: 1
+    requiredRoomCount: 2
+    weight: 9
+    firstNeed: Food
+    secondNeed: 
+    satisfactionFillSeconds: 7
+    patienceFillSeconds: 9
+    experienceReward: 12
+    globalSatisfactionOnSuccess: 5
+    globalSatisfactionOnFailure: -8
+    cooldownSeconds: 6
+  - id: D004
+    enabled: 1
+    requiredRoomCount: 2
+    weight: 9
+    firstNeed: Hot
+    secondNeed: 
+    satisfactionFillSeconds: 7
+    patienceFillSeconds: 9
+    experienceReward: 12
+    globalSatisfactionOnSuccess: 5
+    globalSatisfactionOnFailure: -8
+    cooldownSeconds: 6
+  - id: D005
+    enabled: 1
+    requiredRoomCount: 15
+    weight: 6
+    firstNeed: Cold
+    secondNeed: Fun
+    satisfactionFillSeconds: 6
+    patienceFillSeconds: 8
+    experienceReward: 18
+    globalSatisfactionOnSuccess: 7
+    globalSatisfactionOnFailure: -10
+    cooldownSeconds: 6
+  - id: D006
+    enabled: 1
+    requiredRoomCount: 15
+    weight: 6
+    firstNeed: Food
+    secondNeed: Hot
+    satisfactionFillSeconds: 6
+    patienceFillSeconds: 8
+    experienceReward: 20
+    globalSatisfactionOnSuccess: 7
+    globalSatisfactionOnFailure: -10
+    cooldownSeconds: 6
+  - id: D007
+    enabled: 1
+    requiredRoomCount: 15
+    weight: 4
+    firstNeed: Cold
+    secondNeed: Food
+    satisfactionFillSeconds: 5
+    patienceFillSeconds: 7
+    experienceReward: 22
+    globalSatisfactionOnSuccess: 8
+    globalSatisfactionOnFailure: -12
+    cooldownSeconds: 6
+  - id: D008
+    enabled: 1
+    requiredRoomCount: 15
+    weight: 4
+    firstNeed: Hot
+    secondNeed: Fun
+    satisfactionFillSeconds: 5
+    patienceFillSeconds: 7
+    experienceReward: 22
+    globalSatisfactionOnSuccess: 8
+    globalSatisfactionOnFailure: -12
+    cooldownSeconds: 6
+  RoomConfigRows:
+  - roomConfigId: R001
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    widthWorld: 8
+    heightWorld: 6
+    allowRotation: 1
+    tvCount: 1
+    fanCount: 1
+    heaterCount: 0
+    inductionCount: 0
+    airConditionerCount: 0
+    wallOutletSocketMin: 1
+    wallOutletSocketMax: 2
+  - roomConfigId: R002
+    enabled: 1
+    minRoomCount: 2
+    weight: 9
+    widthWorld: 12
+    heightWorld: 6
+    allowRotation: 1
+    tvCount: 1
+    fanCount: 0
+    heaterCount: 1
+    inductionCount: 1
+    airConditionerCount: 0
+    wallOutletSocketMin: 1
+    wallOutletSocketMax: 3
+  - roomConfigId: R003
+    enabled: 1
+    minRoomCount: 3
+    weight: 8
+    widthWorld: 8
+    heightWorld: 9
+    allowRotation: 1
+    tvCount: 0
+    fanCount: 1
+    heaterCount: 1
+    inductionCount: 0
+    airConditionerCount: 1
+    wallOutletSocketMin: 2
+    wallOutletSocketMax: 3
+  - roomConfigId: R004
+    enabled: 1
+    minRoomCount: 4
+    weight: 7
+    widthWorld: 12
+    heightWorld: 9
+    allowRotation: 1
+    tvCount: 1
+    fanCount: 1
+    heaterCount: 1
+    inductionCount: 1
+    airConditionerCount: 0
+    wallOutletSocketMin: 1
+    wallOutletSocketMax: 3
+  - roomConfigId: R005
+    enabled: 1
+    minRoomCount: 5
+    weight: 5
+    widthWorld: 12
+    heightWorld: 9
+    allowRotation: 1
+    tvCount: 1
+    fanCount: 1
+    heaterCount: 1
+    inductionCount: 1
+    airConditionerCount: 1
+    wallOutletSocketMin: 2
+    wallOutletSocketMax: 4
+  ProductRedistributionRows:
+  - minRoomCount: 1
+    maxRoomCount: 3
+    minExtraProducts: 0
+    maxExtraProducts: 0
+    roomSelectionWeightFormula: Area / (CurrentProductCount + 1)
+    distinctRoomPerProduct: 1
+    notes: "\uBC29 1~3\uAC1C: \uCD94\uAC00 \uC81C\uD488 \uC5C6\uC74C"
+  - minRoomCount: 4
+    maxRoomCount: 5
+    minExtraProducts: 1
+    maxExtraProducts: 1
+    roomSelectionWeightFormula: Area / (CurrentProductCount + 1)
+    distinctRoomPerProduct: 1
+    notes: "\uBC29 4~5\uAC1C: \uCD94\uAC00 \uC81C\uD488 1\uAC1C"
+  - minRoomCount: 6
+    maxRoomCount: 10
+    minExtraProducts: 1
+    maxExtraProducts: 2
+    roomSelectionWeightFormula: Area / (CurrentProductCount + 1)
+    distinctRoomPerProduct: 1
+    notes: "\uBC29 6~10\uAC1C: \uCD94\uAC00 \uC81C\uD488 1~2\uAC1C"
+  - minRoomCount: 11
+    maxRoomCount: 999
+    minExtraProducts: 1
+    maxExtraProducts: 3
+    roomSelectionWeightFormula: Area / (CurrentProductCount + 1)
+    distinctRoomPerProduct: 1
+    notes: "\uBC29 11\uAC1C \uC774\uC0C1: \uCD94\uAC00 \uC81C\uD488 1~3\uAC1C"
+  ProductSpawnPoolRows:
+  - productType: Fan
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    notes: "\uC784\uC2DC \uBC38\uB7F0\uC2A4: \uCD08\uBC18\uBD80\uD130 \uB4F1\uC7A5
+      \uAC00\uB2A5"
+  - productType: TV
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    notes: "\uC784\uC2DC \uBC38\uB7F0\uC2A4: \uCD08\uBC18\uBD80\uD130 \uB4F1\uC7A5
+      \uAC00\uB2A5"
+  - productType: Heater
+    enabled: 1
+    minRoomCount: 4
+    weight: 7
+    notes: "\uC784\uC2DC \uBC38\uB7F0\uC2A4: \uBC29 4\uAC1C\uBD80\uD130 \uB204\uC801
+      \uD6C4\uBCF4"
+  - productType: Induction
+    enabled: 1
+    minRoomCount: 6
+    weight: 5
+    notes: "\uC784\uC2DC \uBC38\uB7F0\uC2A4: \uBC29 6\uAC1C\uBD80\uD130 \uB204\uC801
+      \uD6C4\uBCF4"
+  - productType: AirConditioner
+    enabled: 1
+    minRoomCount: 9
+    weight: 3
+    notes: "\uC784\uC2DC \uBC38\uB7F0\uC2A4: \uBC29 9\uAC1C\uBD80\uD130 \uB204\uC801
+      \uD6C4\uBCF4"
+  ProgressionRows:
+  - roomCount: 1
+    requiredEXP: 20
+  - roomCount: 2
+    requiredEXP: 30
+  - roomCount: 3
+    requiredEXP: 40
+  - roomCount: 4
+    requiredEXP: 50
+  - roomCount: 5
+    requiredEXP: 60
+  - roomCount: 6
+    requiredEXP: 70
+  - roomCount: 7
+    requiredEXP: 80
+  - roomCount: 8
+    requiredEXP: 90
+  - roomCount: 9
+    requiredEXP: 100
+  - roomCount: 10
+    requiredEXP: 110
+  - roomCount: 11
+    requiredEXP: 120
+  - roomCount: 12
+    requiredEXP: 130
+  - roomCount: 13
+    requiredEXP: 140
+  - roomCount: 14
+    requiredEXP: 150
+  - roomCount: 15
+    requiredEXP: 160
+  RewardRows:
+  - rewardId: RW001
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    displayName: "\uC9D1 \uC804\uB825 \uD655\uC7A5"
+    description: "\uC9D1 \uC804\uCCB4 \uD5C8\uC6A9 \uC804\uB825\uC744 1 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: None
+    effect1Type: HouseAllowedPower
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW002
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    displayName: "\uBA40\uD2F0\uD0ED \uCD9C\uB825 \uAC15\uD654"
+    description: "\uC120\uD0DD\uD55C \uBA40\uD2F0\uD0ED\uC758 \uD5C8\uC6A9 \uC804\uB825\uC744
+      1 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: PowerStrip
+    effect1Type: PowerStripAllowedPower
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW003
+    enabled: 1
+    minRoomCount: 1
+    weight: 10
+    displayName: "\uC18C\uCF13 \uD655\uC7A5 I"
+    description: "\uC120\uD0DD\uD55C \uBA40\uD2F0\uD0ED\uC758 \uD65C\uC131 \uC18C\uCF13
+      \uC218\uB97C 1 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: PowerStrip
+    effect1Type: PowerStripSocketCount
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW004
+    enabled: 1
+    minRoomCount: 3
+    weight: 6
+    displayName: "\uC18C\uCF13 \uD655\uC7A5 II"
+    description: "\uC120\uD0DD\uD55C \uBA40\uD2F0\uD0ED\uC758 \uD65C\uC131 \uC18C\uCF13
+      \uC218\uB97C 2 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: PowerStrip
+    effect1Type: PowerStripSocketCount
+    effect1Value: 2
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW005
+    enabled: 1
+    minRoomCount: 5
+    weight: 3
+    displayName: "\uC18C\uCF13 \uD655\uC7A5 III"
+    description: "\uC120\uD0DD\uD55C \uBA40\uD2F0\uD0ED\uC758 \uD65C\uC131 \uC18C\uCF13
+      \uC218\uB97C 3 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: PowerStrip
+    effect1Type: PowerStripSocketCount
+    effect1Value: 3
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW006
+    enabled: 1
+    minRoomCount: 2
+    weight: 8
+    displayName: "\uCF00\uC774\uBE14 \uC5F0\uC7A5"
+    description: "\uC120\uD0DD\uD55C \uC81C\uD488 \uB610\uB294 \uBA40\uD2F0\uD0ED\uC758
+      \uCF00\uC774\uBE14 \uAE38\uC774\uB97C 1 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: CableOwner
+    effect1Type: CableLength
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW007
+    enabled: 1
+    minRoomCount: 2
+    weight: 6
+    displayName: "\uBCBD \uCF58\uC13C\uD2B8 \uCD94\uAC00"
+    description: "\uC6D0\uD558\uB294 \uBCBD \uC704\uCE58\uC5D0 \uC0C8 \uBCBD \uCF58\uC13C\uD2B8\uB97C
+      1\uAC1C \uCD94\uAC00\uD569\uB2C8\uB2E4."
+    targetType: WallPlacement
+    effect1Type: AddWallOutlet
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  - rewardId: RW008
+    enabled: 1
+    minRoomCount: 4
+    weight: 4
+    displayName: "\uBA40\uD2F0\uD0ED \uC885\uD569 \uAC15\uD654"
+    description: "\uC120\uD0DD\uD55C \uBA40\uD2F0\uD0ED\uC758 \uD5C8\uC6A9 \uC804\uB825\uACFC
+      \uD65C\uC131 \uC18C\uCF13 \uC218\uB97C \uAC01\uAC01 1 \uB298\uB9BD\uB2C8\uB2E4."
+    targetType: PowerStrip
+    effect1Type: PowerStripAllowedPower
+    effect1Value: 1
+    effect2Type: PowerStripSocketCount
+    effect2Value: 1
+  - rewardId: RW009
+    enabled: 1
+    minRoomCount: 1
+    weight: 6
+    displayName: "\uBA40\uD2F0\uD0ED \uCD94\uAC00"
+    description: "\uC6D0\uD558\uB294 \uBC29\uC5D0 \uC0C8 \uBA40\uD2F0\uD0ED\uC744
+      1\uAC1C \uCD94\uAC00\uD569\uB2C8\uB2E4."
+    targetType: RoomPlacement
+    effect1Type: AddPowerStrip
+    effect1Value: 1
+    effect2Type: 
+    effect2Value: 0
+  PowerStripSpawnRows:
+  - socketCount: 1
+    weight: 40
+  - socketCount: 2
+    weight: 30
+  - socketCount: 3
+    weight: 15
+  - socketCount: 4
+    weight: 10
+  - socketCount: 5
+    weight: 5
+  WallOutletSpawnRows:
+  - socketCount: 1
+    weight: 60
+  - socketCount: 2
+    weight: 25
+  - socketCount: 3
+    weight: 10
+  - socketCount: 4
+    weight: 4
+  - socketCount: 5
+    weight: 1
+  StarterConfigRows:
+  - starterRoomIndex: 1
+    enabled: 1
+    productType: Fan
+    productCount: 1
+    productPowerMin: 2
+    productPowerMax: 3
+    wallOutletCount: 1
+    wallOutletSocketMin: 1
+    wallOutletSocketMax: 2
+    notes: "\uCD08\uAE30 \uBC29 1: \uC120\uD48D\uAE30 1\uAC1C. \uC81C\uD488 \uC804\uB825\uC740
+      2~3 \uBC94\uC704\uC5EC\uC57C \uD568. \uC81C\uD488\uC740 \uAE30\uBCF8 \uCF00\uC774\uBE14
+      \uAE38\uC774\uB85C \uBCBD \uCF58\uC13C\uD2B8\uC5D0 \uC5F0\uACB0 \uAC00\uB2A5\uD55C
+      \uC704\uCE58\uC5D0 \uBC30\uCE58"
+  - starterRoomIndex: 2
+    enabled: 1
+    productType: TV
+    productCount: 1
+    productPowerMin: 2
+    productPowerMax: 3
+    wallOutletCount: 1
+    wallOutletSocketMin: 1
+    wallOutletSocketMax: 2
+    notes: "\uCD08\uAE30 \uBC29 2: TV 1\uAC1C. \uC81C\uD488 \uC804\uB825\uC740 2~3
+      \uBC94\uC704\uC5EC\uC57C \uD568. \uC81C\uD488\uC740 \uAE30\uBCF8 \uCF00\uC774\uBE14
+      \uAE38\uC774\uB85C \uBCBD \uCF58\uC13C\uD2B8\uC5D0 \uC5F0\uACB0 \uAC00\uB2A5\uD55C
+      \uC704\uCE58\uC5D0 \uBC30\uCE58"

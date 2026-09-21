@@ -88,50 +88,7 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         [Test]
         public void RoomContentReady_PublishesAfterRuntimeOutletIsConnectionReady()
         {
-            var wallOutletPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Wall_Outlets/Wall_Outlet.prefab");
-            Assert.That(wallOutletPrefab, Is.Not.Null);
-            var tvPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Products/TV.prefab");
-            var fanPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Products/Fan.prefab");
-            var heaterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Products/Heater.prefab");
-            var inductionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Products/Induction.prefab");
-            var airConditionerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/03_Prefabs/Products/Air_Conditioner.prefab");
-            Assert.That(tvPrefab, Is.Not.Null);
-            Assert.That(fanPrefab, Is.Not.Null);
-            Assert.That(heaterPrefab, Is.Not.Null);
-            Assert.That(inductionPrefab, Is.Not.Null);
-            Assert.That(airConditionerPrefab, Is.Not.Null);
-            var outletRoot = new GameObject("Wall_Outlets");
-            createdObjects.Add(outletRoot);
-            var productRoot = new GameObject("Products");
-            createdObjects.Add(productRoot);
-            var content = controller.gameObject.AddComponent<
-                RoomContentGenerationController>();
-            var serializedContent = new SerializedObject(content);
-            serializedContent.FindProperty("roomGeneration")
-                .objectReferenceValue = controller;
-            serializedContent.FindProperty("tvPrefab")
-                .objectReferenceValue = tvPrefab.GetComponent<ApplianceSource>();
-            serializedContent.FindProperty("fanPrefab")
-                .objectReferenceValue = fanPrefab.GetComponent<ApplianceSource>();
-            serializedContent.FindProperty("heaterPrefab")
-                .objectReferenceValue = heaterPrefab.GetComponent<ApplianceSource>();
-            serializedContent.FindProperty("inductionPrefab")
-                .objectReferenceValue = inductionPrefab.GetComponent<ApplianceSource>();
-            serializedContent.FindProperty("airConditionerPrefab")
-                .objectReferenceValue = airConditionerPrefab.GetComponent<ApplianceSource>();
-            serializedContent.FindProperty("wallOutletPrefab")
-                .objectReferenceValue = wallOutletPrefab.GetComponent<WallOutlet>();
-            serializedContent.ApplyModifiedPropertiesWithoutUndo();
-            var serializedController = new SerializedObject(controller);
-            serializedController.FindProperty("roomContentGeneration")
-                .objectReferenceValue = content;
-            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            ConfigureProductionContent();
 
             controller.Initialize();
             var promotedRoom = controller.State.NextRoomPlan.Room;
@@ -266,9 +223,9 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             var promoted = controller.PromoteCurrentHint();
 
             Assert.That(promoted, Is.True);
-            Assert.That(controller.State.UnlockedLayout.Rooms, Has.Count.EqualTo(2));
-            Assert.That(controller.State.UnlockedLayout.Doors, Has.Count.EqualTo(1));
-            Assert.That(controller.State.UnlockedLayout.Rooms[1], Is.EqualTo(storedHint));
+            Assert.That(controller.State.UnlockedLayout.Rooms, Has.Count.EqualTo(3));
+            Assert.That(controller.State.UnlockedLayout.Doors, Has.Count.EqualTo(2));
+            Assert.That(controller.State.UnlockedLayout.Rooms[2], Is.EqualTo(storedHint));
             Assert.That(eventOrder, Is.EqualTo(new[] { "unlocked", "content-ready", "next-hint" }));
 
             var promotedBinder = FindBinder(storedHint.Id);
@@ -282,6 +239,99 @@ namespace Octoplug.Tests.Editor.RoomGeneration
                 Is.EqualTo(GridCellState.Walkable));
             Assert.That(controller.State.HasNextRoomPlan, Is.True);
             Assert.That(controller.State.NextRoomPlan.Room.Id, Is.Not.EqualTo(storedHint.Id));
+        }
+
+        [Test]
+        public void Initialize_CreatesTwoStarterRoomsWithExactRequiredContent()
+        {
+            ConfigureProductionContent();
+
+            controller.Initialize();
+
+            Assert.That(controller.State.UnlockedLayout.Rooms, Has.Count.EqualTo(2));
+            foreach (var room in controller.State.UnlockedLayout.Rooms)
+            {
+                Assert.That(CountProducts(room.Id), Is.EqualTo(1));
+                Assert.That(CountWallOutlets(room.Id), Is.EqualTo(1));
+            }
+        }
+
+        private void ConfigureProductionContent()
+        {
+            var wallOutletPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Wall_Outlets/Wall_Outlet.prefab");
+            var tvPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/TV.prefab");
+            var fanPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Fan.prefab");
+            var heaterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Heater.prefab");
+            var inductionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Induction.prefab");
+            var airConditionerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/03_Prefabs/Products/Air_Conditioner.prefab");
+            Assert.That(wallOutletPrefab, Is.Not.Null);
+            Assert.That(tvPrefab, Is.Not.Null);
+            Assert.That(fanPrefab, Is.Not.Null);
+            Assert.That(heaterPrefab, Is.Not.Null);
+            Assert.That(inductionPrefab, Is.Not.Null);
+            Assert.That(airConditionerPrefab, Is.Not.Null);
+
+            createdObjects.Add(new GameObject("Wall_Outlets"));
+            createdObjects.Add(new GameObject("Products"));
+            var content = controller.gameObject.AddComponent<
+                RoomContentGenerationController>();
+            var serializedContent = new SerializedObject(content);
+            serializedContent.FindProperty("roomGeneration")
+                .objectReferenceValue = controller;
+            serializedContent.FindProperty("tvPrefab")
+                .objectReferenceValue = tvPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("fanPrefab")
+                .objectReferenceValue = fanPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("heaterPrefab")
+                .objectReferenceValue = heaterPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("inductionPrefab")
+                .objectReferenceValue = inductionPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("airConditionerPrefab")
+                .objectReferenceValue = airConditionerPrefab.GetComponent<ApplianceSource>();
+            serializedContent.FindProperty("wallOutletPrefab")
+                .objectReferenceValue = wallOutletPrefab.GetComponent<WallOutlet>();
+            serializedContent.ApplyModifiedPropertiesWithoutUndo();
+
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("roomContentGeneration")
+                .objectReferenceValue = content;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static int CountProducts(RoomId roomId)
+        {
+            var count = 0;
+            foreach (var product in RuntimeWorldRegistry.GetProducts())
+            {
+                if (RuntimeWorldRegistry.TryGetRoomOwner(product, out var owner)
+                    && owner == roomId)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountWallOutlets(RoomId roomId)
+        {
+            var count = 0;
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                    && owner == roomId)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private RoomGenerationRoomBinder FindBinder(RoomId roomId)

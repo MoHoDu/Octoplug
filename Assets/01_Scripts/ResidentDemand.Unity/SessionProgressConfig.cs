@@ -18,7 +18,7 @@ namespace Octoplug.ResidentDemand.Unity
         public RequiredExperienceTable CreateRequiredExperienceTable()
         {
             // The Source of Truth is now the progression balance data.
-            return DefaultRequiredExperience.Create();
+            return Octoplug.ResidentDemand.RequiredExperienceMapper.Create();
         }
     }
 }

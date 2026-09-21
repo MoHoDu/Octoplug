@@ -39,10 +39,12 @@ Current rules:
 
 ## Production Room Content
 
-- `DefaultRoomContentBalance` is the validated local runtime mirror of the Sheet-authored RC001–RC007 room configurations; runtime generation does not access the Sheet or network.
-- Every gameplay-active room finalizes its required Wall Outlet before Product placement.
+- `GameBalanceArchive` is the validated local runtime mirror of the Sheet-authored balance tables; runtime generation does not access the Sheet or network.
+- Every gameplay-active room finalizes exactly one required Wall Outlet before Product placement.
+- Starter Rooms use `초기 구성`; Room 3+ selects exactly one base Product from `제품 등장 풀`. RoomConfig Product count fields are not runtime base-spawn authority.
 - Product placement exhaustively searches full-footprint grid candidates, rejects positive-area authored-bounds overlap with Products/PowerStrips, and requires a production-routed path to a room-owned outlet within the initial cable length.
-- Accepted Products reserve their placement cells synchronously. A selected RoomConfig succeeds only when its exact Product type/count composition is finalized; a shortfall rolls back that room-content transaction and suppresses `RoomContentReady`.
+- Accepted Products reserve their placement cells synchronously. Base-content shortfall rolls back generated equipment and restores the locked hint rather than leaving an empty unlocked Room.
+- Redistribution runs only after base content succeeds and adds at most one Product to each selected distinct Room.
 
 ## Design Direction
 
