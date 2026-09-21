@@ -200,7 +200,7 @@ namespace Octoplug.Telemetry
 
         private void RecordObject(Component value, string spawnReason, string explicitRoomId = null)
         {
-            if (value == null || !recordedObjects.Add(value.GetInstanceID())) return;
+            if (!SessionTelemetryService.IsRecording || value == null || !recordedObjects.Add(value.GetInstanceID())) return;
             var roomId = explicitRoomId ?? (RuntimeWorldRegistry.TryGetRoomOwner(value, out var owner) ? owner.Value : string.Empty);
             var id = SessionTelemetryService.GetRuntimeId(value, GetObjectType(value).ToLowerInvariant());
             var position = value.transform.position;
