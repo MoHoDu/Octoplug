@@ -16,7 +16,7 @@ namespace Octoplug.ResidentDemand
                     rows.Add(new RequiredExperienceAuthoringRow(row.roomCount, row.requiredEXP));
                 }
             }
-            return RequiredExperienceImporter.Import(rows);
+            return RequiredExperienceImporter.FromAuthoringRows(rows);
         }
     }
 }
