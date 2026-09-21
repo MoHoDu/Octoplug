@@ -9,14 +9,14 @@
 - [x] Search all footprint-valid Product positions instead of aborting after the first unreachable candidate.
 - [x] Require grid clearance, authored-bounds Physics2D clearance, and production-routed initial cable reachability.
 - [x] Require exact selected RoomConfig Product composition; roll back partial room content and suppress `RoomContentReady` on shortfall.
-- [ ] Complete bidirectional Door/Outlet exclusion through the existing Door planner.
-- [ ] Complete RW009 physics-overlap validation while retaining clicked point, bounded correction, and selective dimming.
+- [x] Complete bidirectional Door/Outlet exclusion through the existing Door planner.
+- [x] Complete RW009 physics-overlap validation while retaining clicked point, bounded correction, and selective dimming.
 - [x] Add Product Tooltip outside-pointer-down dismissal.
 - [x] Add persistent Alert instructions with transient override/restoration.
 - [x] Add focused Product candidate and balance tests.
 - [x] Reproduce runtime Wall Outlet readiness through the production room lifecycle and verify terminal route/candidate resolution.
 - [x] Reuse shared terminal routing in gameplay and verify generated Plug connect/power/disconnect/reconnect; full EditMode suite is 103/103.
-- [ ] Complete only the focused matching-Editor Human Verification for generated-outlet magnetic correction, cable, power, disconnect, and reconnect.
-- [ ] Re-run final Unity, fast, harness, task-context, and diff verification after remaining scope.
-- [ ] Keep Google Sheet sync out of scope.
-- [ ] Keep `HUMAN_VERIFY_REQUIRED`; do not commit, push, or mark DONE.
+- [x] Complete only the focused matching-Editor Human Verification for generated-outlet magnetic correction, cable, power, disconnect, and reconnect.
+- [x] Re-run final Unity, fast, harness, task-context, and diff verification after remaining scope.
+- [x] Keep Google Sheet sync out of scope.
+- [x] Keep `HUMAN_VERIFY_REQUIRED`; do not commit, push, or mark DONE.
