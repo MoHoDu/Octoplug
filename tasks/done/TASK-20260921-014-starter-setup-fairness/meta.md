@@ -1,12 +1,12 @@
 ---
 id: TASK-20260921-014
 slug: starter-setup-fairness
-status: IMPLEMENTATION
+status: COMPLETED
 domain:
   - room-generation
   - power-connection
 started: 2026-09-21
-completed: 
+completed: 2026-09-21
 ---
 
 ## Objective
