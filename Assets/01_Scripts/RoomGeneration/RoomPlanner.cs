@@ -153,7 +153,66 @@ namespace Octoplug.RoomGeneration
                 intervals.Add(new CoordinateInterval(cursor, baseMax));
             }
 
+            if (options.ExtraBlockedIntervals != null)
+            {
+                var extraBlocks = new List<CoordinateInterval>();
+                if (options.ExtraBlockedIntervals.TryGetValue(sharedWall.AdjacentWall, out var adjacentBlocks))
+                {
+                    extraBlocks.AddRange(adjacentBlocks);
+                }
+                if (options.ExtraBlockedIntervals.TryGetValue(sharedWall.CandidateWall, out var candidateBlocks))
+                {
+                    extraBlocks.AddRange(candidateBlocks);
+                }
+
+                if (extraBlocks.Count > 0)
+                {
+                    intervals = SubtractIntervals(intervals, extraBlocks, clearance);
+                }
+            }
+
             return intervals.AsReadOnly();
+        }
+
+        private static List<CoordinateInterval> SubtractIntervals(
+            List<CoordinateInterval> safeIntervals,
+            List<CoordinateInterval> extraBlocks,
+            float clearance)
+        {
+            var result = new List<CoordinateInterval>();
+            foreach (var safe in safeIntervals)
+            {
+                var currentPieces = new List<CoordinateInterval> { safe };
+                foreach (var block in extraBlocks)
+                {
+                    var blockStart = block.Min - clearance;
+                    var blockEnd = block.Max + clearance;
+
+                    var nextPieces = new List<CoordinateInterval>();
+                    foreach (var piece in currentPieces)
+                    {
+                        if (blockEnd <= piece.Min || blockStart >= piece.Max)
+                        {
+                            nextPieces.Add(piece); // No overlap
+                        }
+                        else
+                        {
+                            // Overlap. Keep the parts outside the block
+                            if (piece.Min < blockStart)
+                            {
+                                nextPieces.Add(new CoordinateInterval(piece.Min, blockStart));
+                            }
+                            if (piece.Max > blockEnd)
+                            {
+                                nextPieces.Add(new CoordinateInterval(blockEnd, piece.Max));
+                            }
+                        }
+                    }
+                    currentPieces = nextPieces;
+                }
+                result.AddRange(currentPieces);
+            }
+            return result;
         }
 
         private static void AddInteriorCorners(RoomBounds2D bounds, WallSpan wall, ICollection<float> result)

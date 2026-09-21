@@ -4,6 +4,39 @@ namespace Octoplug.RoomGeneration
 {
     public static class DefaultRoomContentBalance
     {
+        public static IReadOnlyList<StarterRoomConfigRecord> GetStarterConfigs()
+        {
+            return new[]
+            {
+                new StarterRoomConfigRecord(
+                    starterRoomIndex: 1,
+                    enabled: true,
+                    tvCount: 0,
+                    fanCount: 1,
+                    heaterCount: 0,
+                    inductionCount: 0,
+                    airConditionerCount: 0,
+                    wallOutletCount: 1,
+                    wallOutletSocketMin: 1,
+                    wallOutletSocketMax: 2,
+                    productPowerMin: 2,
+                    productPowerMax: 3),
+                new StarterRoomConfigRecord(
+                    starterRoomIndex: 2,
+                    enabled: true,
+                    tvCount: 1,
+                    fanCount: 0,
+                    heaterCount: 0,
+                    inductionCount: 0,
+                    airConditionerCount: 0,
+                    wallOutletCount: 1,
+                    wallOutletSocketMin: 1,
+                    wallOutletSocketMax: 2,
+                    productPowerMin: 2,
+                    productPowerMax: 3)
+            };
+        }
+
         public static IReadOnlyList<RoomConfigRecord> GetDefaultConfigs()
         {
             return new[]

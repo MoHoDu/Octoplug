@@ -101,6 +101,7 @@ namespace Octoplug.RoomGeneration.Unity
 
             FinalizeRoomContent(seedPlacement);
             PlanStoreAndRenderNextHint();
+            PromoteCurrentHint();
         }
 
         [ContextMenu("Debug/Promote Current Hint")]
@@ -169,7 +170,60 @@ namespace Octoplug.RoomGeneration.Unity
                 state.UnlockedLayout,
                 coreRoomSizes,
                 candidateIdPrefix);
-            var result = state.PlanFollowing(candidates, doorOptions, doorPolicy);
+
+            var extraBlocked = new Dictionary<RoomWallId, IReadOnlyList<CoordinateInterval>>();
+            foreach (var outlet in Octoplug.Power.RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (outlet != null && Octoplug.Power.RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var ownerId))
+                {
+                    RoomPlacement room = default;
+                    bool foundRoom = false;
+                    for (int i = 0; i < state.UnlockedLayout.Rooms.Count; i++)
+                    {
+                        if (state.UnlockedLayout.Rooms[i].Id == ownerId)
+                        {
+                            room = state.UnlockedLayout.Rooms[i];
+                            foundRoom = true;
+                            break;
+                        }
+                    }
+                    if (!foundRoom) continue;
+
+                    var colliders = outlet.GetComponentsInChildren<Collider2D>(true);
+                    if (colliders.Length == 0) continue;
+                    var bounds = colliders[0].bounds;
+                    for (int i = 1; i < colliders.Length; i++) bounds.Encapsulate(colliders[i].bounds);
+
+                    var center = bounds.center;
+                    var roomBounds = room.Bounds;
+                    WallSide side = WallSide.Bottom;
+                    float minDiff = float.MaxValue;
+
+                    float dTop = Mathf.Abs(center.y - roomBounds.MaxY);
+                    if (dTop < minDiff) { minDiff = dTop; side = WallSide.Top; }
+                    float dRight = Mathf.Abs(center.x - roomBounds.MaxX);
+                    if (dRight < minDiff) { minDiff = dRight; side = WallSide.Right; }
+                    float dBottom = Mathf.Abs(center.y - roomBounds.MinY);
+                    if (dBottom < minDiff) { minDiff = dBottom; side = WallSide.Bottom; }
+                    float dLeft = Mathf.Abs(center.x - roomBounds.MinX);
+                    if (dLeft < minDiff) { minDiff = dLeft; side = WallSide.Left; }
+
+                    var wallId = new RoomWallId(ownerId, side);
+                    float start = (side == WallSide.Top || side == WallSide.Bottom) ? bounds.min.x : bounds.min.y;
+                    float end = (side == WallSide.Top || side == WallSide.Bottom) ? bounds.max.x : bounds.max.y;
+
+                    if (!extraBlocked.TryGetValue(wallId, out var list))
+                    {
+                        list = new List<CoordinateInterval>();
+                        extraBlocked[wallId] = list;
+                    }
+                    ((List<CoordinateInterval>)list).Add(new CoordinateInterval(start, end));
+                }
+            }
+
+            var dynamicOptions = new DoorPlanningOptions(doorOptions.DoorWidth, doorOptions.SafetyMargin, extraBlocked);
+
+            var result = state.PlanFollowing(candidates, dynamicOptions, doorPolicy);
             if (!result.Success)
             {
                 Debug.LogWarning($"No valid following room candidate was found after {result.Rejections.Count} rejection(s).", this);

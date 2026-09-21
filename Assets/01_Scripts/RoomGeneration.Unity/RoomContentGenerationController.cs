@@ -11,6 +11,8 @@ namespace Octoplug.RoomGeneration.Unity
     {
         private const int RequiredWallOutletCount = 1;
 
+        [SerializeField] private HousePowerBudget housePowerBudget;
+
         [SerializeField] private ProductionRoomGenerationController roomGeneration;
         [SerializeField] private ApplianceSource tvPrefab;
         [SerializeField] private ApplianceSource fanPrefab;
@@ -26,7 +28,35 @@ namespace Octoplug.RoomGeneration.Unity
         [SerializeField] private string generatedWallOutletWalls;
         [SerializeField] private string wallOutletPlacementWarning;
 
-        /// <summary>
+
+        private void EnsureHousePowerBudget()
+        {
+            if (housePowerBudget == null)
+            {
+#if UNITY_6000_0_OR_NEWER
+                housePowerBudget = Object.FindAnyObjectByType<HousePowerBudget>();
+#else
+                housePowerBudget = FindObjectOfType<HousePowerBudget>();
+#endif
+            }
+        }
+
+        private float GetHouseAllowedPower()
+        {
+            EnsureHousePowerBudget();
+            return housePowerBudget != null ? housePowerBudget.AllowedPowerWatts : 10f;
+        }
+
+        private bool IsConfigPowerFeasible(RoomConfigRecord config, float housePower)
+        {
+            if (config.TvCount > 0 && tvPrefab != null && tvPrefab.PowerConsumptionWatts > housePower) return false;
+            if (config.FanCount > 0 && fanPrefab != null && fanPrefab.PowerConsumptionWatts > housePower) return false;
+            if (config.HeaterCount > 0 && heaterPrefab != null && heaterPrefab.PowerConsumptionWatts > housePower) return false;
+            if (config.InductionCount > 0 && inductionPrefab != null && inductionPrefab.PowerConsumptionWatts > housePower) return false;
+            if (config.AirConditionerCount > 0 && airConditionerPrefab != null && airConditionerPrefab.PowerConsumptionWatts > housePower) return false;
+            return true;
+        }
+/// <summary>
         /// Creates the promoted room's production content synchronously. The room
         /// lifecycle owner calls this before its final routing-grid refresh and
         /// before publishing RoomContentReady, so consumers can rely on that event
@@ -34,27 +64,69 @@ namespace Octoplug.RoomGeneration.Unity
         /// </summary>
         public bool GenerateRoomContent(RoomPlacement room)
         {
-            var configs = DefaultRoomContentBalance.GetDefaultConfigs()
-                .Where(c => c.Enabled && c.MinRoomCount <= roomGeneration.State.UnlockedLayout.Rooms.Count)
-                .ToList();
+            var roomCount = roomGeneration.State.UnlockedLayout.Rooms.Count;
+            int? tvCount = 0;
+            int? fanCount = 0;
+            int? heaterCount = 0;
+            int? inductionCount = 0;
+            int? airConditionerCount = 0;
+            int wallOutletSocketMin = 1;
+            int wallOutletSocketMax = 2;
+            string configId = string.Empty;
 
-            if (configs.Count == 0)
+            if (roomCount <= 2)
             {
-                return false;
+                var starters = DefaultRoomContentBalance.GetStarterConfigs();
+                var starter = starters.FirstOrDefault(s => s.StarterRoomIndex == roomCount && s.Enabled);
+                if (starter != null)
+                {
+                    tvCount = starter.TvCount;
+                    fanCount = starter.FanCount;
+                    heaterCount = starter.HeaterCount;
+                    inductionCount = starter.InductionCount;
+                    airConditionerCount = starter.AirConditionerCount;
+                    wallOutletSocketMin = starter.WallOutletSocketMin;
+                    wallOutletSocketMax = starter.WallOutletSocketMax;
+                    configId = $"starter-{starter.StarterRoomIndex}";
+                }
             }
 
-            int totalWeight = configs.Sum(c => c.Weight);
-            int roll = UnityEngine.Random.Range(0, totalWeight);
-            RoomConfigRecord selectedConfig = configs[0];
-            int currentWeight = 0;
-            foreach (var config in configs)
+            if (string.IsNullOrEmpty(configId))
             {
-                currentWeight += config.Weight;
-                if (roll < currentWeight)
+                var housePower = GetHouseAllowedPower();
+                var configs = DefaultRoomContentBalance.GetDefaultConfigs()
+                    .Where(c => c.Enabled && c.MinRoomCount <= roomCount)
+                    .Where(c => IsConfigPowerFeasible(c, housePower))
+                    .ToList();
+
+                if (configs.Count == 0)
                 {
-                    selectedConfig = config;
-                    break;
+                    Debug.LogWarning($"[RoomContent] No eligible RoomConfig found for room {room.Id} (RoomCount: {roomCount}, Power: {housePower}).", this);
+                    return false;
                 }
+
+                int totalWeight = configs.Sum(c => c.Weight);
+                int roll = UnityEngine.Random.Range(0, totalWeight);
+                RoomConfigRecord selectedConfig = configs[0];
+                int currentWeight = 0;
+                foreach (var config in configs)
+                {
+                    currentWeight += config.Weight;
+                    if (roll < currentWeight)
+                    {
+                        selectedConfig = config;
+                        break;
+                    }
+                }
+
+                tvCount = selectedConfig.TvCount;
+                fanCount = selectedConfig.FanCount;
+                heaterCount = selectedConfig.HeaterCount;
+                inductionCount = selectedConfig.InductionCount;
+                airConditionerCount = selectedConfig.AirConditionerCount;
+                wallOutletSocketMin = selectedConfig.WallOutletSocketMin;
+                wallOutletSocketMax = selectedConfig.WallOutletSocketMax;
+                configId = selectedConfig.Id;
             }
 
             var gridService = CableRoutingGridService.Instance;
@@ -69,15 +141,15 @@ namespace Octoplug.RoomGeneration.Unity
             generatedWallOutletCount = 0;
             generatedWallOutletWalls = string.Empty;
             wallOutletPlacementWarning = string.Empty;
-            lastSelectedRoomConfigId = selectedConfig.Id;
+            lastSelectedRoomConfigId = configId;
 
             // Infrastructure is finalized first so every Product candidate can
             // prove a production-routed connection using its initial CableLength.
             var generatedObjects = new List<GameObject>();
             generatedWallOutletCount = SpawnWallOutlets(
                 RequiredWallOutletCount,
-                selectedConfig.WallOutletSocketMin,
-                selectedConfig.WallOutletSocketMax,
+                wallOutletSocketMin,
+                wallOutletSocketMax,
                 room,
                 generatedObjects);
             if (generatedWallOutletCount != RequiredWallOutletCount)
@@ -90,7 +162,7 @@ namespace Octoplug.RoomGeneration.Unity
                 Debug.LogWarning(
                     $"[RoomContentRequiredInfrastructure]\n" +
                     $"Room: {room.Id}\n" +
-                    $"Config: {selectedConfig.Id}\n" +
+                    $"Config: {configId}\n" +
                     $"Requested: {RequiredWallOutletCount}\n" +
                     $"Placed: {generatedWallOutletCount}\n" +
                     $"Reason: {wallOutletPlacementWarning}",
@@ -102,46 +174,46 @@ namespace Octoplug.RoomGeneration.Unity
             // considered, so same-batch placement never relies on physics lag.
             generatedProductCount += SpawnProduct(
                 tvPrefab,
-                selectedConfig.TvCount,
+                tvCount.Value,
                 room,
                 grid,
                 generatedObjects);
             generatedProductCount += SpawnProduct(
                 fanPrefab,
-                selectedConfig.FanCount,
+                fanCount.Value,
                 room,
                 grid,
                 generatedObjects);
             generatedProductCount += SpawnProduct(
                 heaterPrefab,
-                selectedConfig.HeaterCount,
+                heaterCount.Value,
                 room,
                 grid,
                 generatedObjects);
             generatedProductCount += SpawnProduct(
                 inductionPrefab,
-                selectedConfig.InductionCount,
+                inductionCount.Value,
                 room,
                 grid,
                 generatedObjects);
             generatedProductCount += SpawnProduct(
                 airConditionerPrefab,
-                selectedConfig.AirConditionerCount,
+                airConditionerCount.Value,
                 room,
                 grid,
                 generatedObjects);
 
-            var requestedProductCount = selectedConfig.TvCount
-                + selectedConfig.FanCount
-                + selectedConfig.HeaterCount
-                + selectedConfig.InductionCount
-                + selectedConfig.AirConditionerCount;
+            var requestedProductCount = tvCount.Value
+                + fanCount.Value
+                + heaterCount.Value
+                + inductionCount.Value
+                + airConditionerCount.Value;
             if (generatedProductCount != requestedProductCount)
             {
                 Debug.LogWarning(
                     $"[RoomContentProductShortfall]\n" +
                     $"Room: {room.Id}\n" +
-                    $"Config: {selectedConfig.Id}\n" +
+                    $"Config: {configId}\n" +
                     $"Requested: {requestedProductCount}\n" +
                     $"Placed: {generatedProductCount}\n" +
                     "Reason: selected RoomConfig could not be placed exactly",
@@ -156,7 +228,7 @@ namespace Octoplug.RoomGeneration.Unity
             Debug.Log(
                 $"[RoomContent]\n" +
                 $"Room: {room.Id}\n" +
-                $"Config: {selectedConfig.Id}\n" +
+                $"Config: {configId}\n" +
                 $"Products Generated: {generatedProductCount}\n" +
                 $"WallOutlets Generated: {generatedWallOutletCount}\n" +
                 $"Outlet Walls: {(string.IsNullOrEmpty(generatedWallOutletWalls) ? "None" : generatedWallOutletWalls)}",
@@ -245,6 +317,7 @@ namespace Octoplug.RoomGeneration.Unity
                 }
 
                 instance.transform.position = spawnPosition;
+                ResolveOverlap(instance, room);
                 if (!RuntimeEquipmentFactory.TryFinalizeProduct(
                         instance,
                         room.Id,
@@ -469,7 +542,52 @@ namespace Octoplug.RoomGeneration.Unity
             return overlapX > tolerance && overlapY > tolerance;
         }
 
-        private static void RollBackGeneratedObjects(
+                private void ResolveOverlap(GameObject instance, RoomPlacement room)
+        {
+            var colliders = instance.GetComponentsInChildren<Collider2D>();
+            if (colliders.Length == 0) return;
+
+            var roomCenter = new Vector3(
+                (room.Bounds.MinX + room.Bounds.MaxX) * 0.5f,
+                (room.Bounds.MinY + room.Bounds.MaxY) * 0.5f,
+                0f);
+
+            // Try adjusting position up to 15 times
+            for (int iteration = 0; iteration < 15; iteration++)
+            {
+                bool overlapped = false;
+                Physics2D.SyncTransforms();
+                foreach (var col in colliders)
+                {
+                    var hits = new List<Collider2D>();
+                    var filter = new ContactFilter2D { useTriggers = false };
+                    Physics2D.OverlapCollider(col, filter, hits);
+
+                    foreach (var hit in hits)
+                    {
+                        if (hit.transform.IsChildOf(instance.transform) || hit.isTrigger) continue;
+
+                        // If it overlaps a solid collider (like wall, outlet, door)
+                        overlapped = true;
+                        break;
+                    }
+                    if (overlapped) break;
+                }
+
+                if (!overlapped) break;
+
+                // Move slightly towards the room center
+                var dir = (roomCenter - instance.transform.position).normalized;
+                if (dir.sqrMagnitude < 0.01f)
+                {
+                    // If already at center, just nudge randomly
+                    dir = UnityEngine.Random.insideUnitCircle.normalized;
+                }
+                instance.transform.position += dir * 0.1f;
+            }
+        }
+
+private static void RollBackGeneratedObjects(
             IReadOnlyList<GameObject> generatedObjects)
         {
             for (var i = generatedObjects.Count - 1; i >= 0; i--)

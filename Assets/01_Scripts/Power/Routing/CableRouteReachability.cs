@@ -121,12 +121,15 @@ namespace Octoplug.Power.Routing
                     }
 
                     var candidatePosition = grid.CellToWorld(candidate);
-                    if (socket.IsTerminalEndpoint
-                        && Vector2.Dot(
-                            candidatePosition - socketPosition,
-                            socket.ApproachDirection) <= 0f)
+                    if (socket.IsTerminalEndpoint)
                     {
-                        continue;
+                        var dot = Vector2.Dot(candidatePosition - socketPosition, socket.ApproachDirection);
+                        // Allow front (dot > 0) and back (dot < 0) for shared walls.
+                        // Reject only if it's perfectly orthogonal (approaching from inside the wall).
+                        if (Mathf.Abs(dot) < 0.001f)
+                        {
+                            continue;
+                        }
                     }
 
                     var sqrDistance = (candidatePosition - socketPosition).sqrMagnitude;
