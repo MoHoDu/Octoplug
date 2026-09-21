@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f215fb1a7fda4e2dbac0831374adef25, type: 3}
+  m_Name: GameplaySfxCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.Audio.GameplaySfxCatalog
+  needFail: {fileID: 8300000, guid: 073e9c4a1ff0517409e5258f05928fc0, type: 3}
+  needSpawn: {fileID: 8300000, guid: f2e63afbdce86524a878f3d8677050fc, type: 3}
+  plugConnect: {fileID: 8300000, guid: b5ba360112cfdd549b5781e8163fa8aa, type: 3}
+  plugDisconnect: {fileID: 8300000, guid: 31fae572418ab3a409c31f274e5cdb72, type: 3}

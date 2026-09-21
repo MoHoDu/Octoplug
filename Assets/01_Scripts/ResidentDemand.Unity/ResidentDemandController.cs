@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Octoplug.Audio;
 using Octoplug.Power;
 using Octoplug.Power.Connection;
 using Octoplug.RoomGeneration.Unity;
@@ -83,6 +84,11 @@ namespace Octoplug.ResidentDemand.Unity
                 if (outcome != null)
                 {
                     _requestSequenceByResident.Remove(resident.ResidentNumber.Value);
+                    if (outcome.Resolution == DemandResolution.Failure)
+                    {
+                        GameplaySfxPlayer.Play(GameplaySfxCue.NeedFail);
+                    }
+
                     DemandResolved?.Invoke(outcome);
                     changed = true;
                 }
@@ -265,9 +271,7 @@ namespace Octoplug.ResidentDemand.Unity
         private ResidentDemandState AddResident(DemandBalanceRecord demand)
         {
             var resident = new ResidentDemandState(_residentNumbers.Next());
-            resident.StartDemand(demand);
-            _requestSequenceByResident[resident.ResidentNumber.Value] =
-                _nextRequestSequence++;
+            StartDemand(resident, demand);
             _residents.Add(resident);
             RecomputeAssignments();
             ResidentsChanged?.Invoke();
@@ -508,10 +512,18 @@ namespace Octoplug.ResidentDemand.Unity
                 return false;
             }
 
+            StartDemand(resident, demand);
+            return true;
+        }
+
+        private void StartDemand(
+            ResidentDemandState resident,
+            DemandBalanceRecord demand)
+        {
             resident.StartDemand(demand);
             _requestSequenceByResident[resident.ResidentNumber.Value] =
                 _nextRequestSequence++;
-            return true;
+            GameplaySfxPlayer.Play(GameplaySfxCue.NeedSpawn);
         }
 
         private bool TryStartIdleDemands()
