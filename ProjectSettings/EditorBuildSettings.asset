@@ -6,6 +6,15 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/00_Scenes/Demo/Lobby.unity
+    guid: ae991a3347b9e9f4c96a7a5d2591040a
+  - enabled: 1
+    path: Assets/00_Scenes/Demo/InfiniteMode.unity
+    guid: dee7eb557483f914cad2d27bb03acc11
+  - enabled: 1
+    path: Assets/00_Scenes/Demo/Result.unity
+    guid: d8744c6587a63e24e9e8b97ea8986670
+  - enabled: 1
     path: Assets/00_Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   m_configObjects:

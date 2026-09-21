@@ -22,13 +22,21 @@ The scene contains:
 - `Canvas/Residents_Area` and `UI_ProductTooltip`.
 - Empty `GameManager`, `ConnectionDirector`, `ResidentController`, and `RoomGenerator` mount points.
 
-The scene is meaningful design content but is not currently in `ProjectSettings/EditorBuildSettings.asset`; only `SampleScene` is in the build list.
+The established Demo build flow is `Lobby → InfiniteMode → Result → Lobby`; build order is Lobby, InfiniteMode, Result, then the preserved SampleScene.
+
+## Session Flow Boundary
+
+- `DemoSceneFlow` centralizes scene loading and resets stale result state, input lock, and time scale before a new session.
+- `SessionProgressState` owns exactly-once final Demand Success/Failure counts alongside Satisfaction, EXP, and Room progression.
+- `GameOverResultTransition` snapshots authoritative Room/Solved/Failed values before loading Result and guards duplicate transitions.
+- `SessionResultStore` is transient runtime memory and resets at subsystem registration; PlayerPrefs is not used.
+- Lobby and Result bind only existing Button/TMP instances. Survey and Guide remain unbound until authoritative destinations exist.
 
 ## Design Direction
 
-Infinite Mode is explicitly the highest-priority demo content. It should eventually run the documented demand → connection → satisfaction → reward → room/resident expansion loop.
+Infinite Mode is the highest-priority demo content and runs the documented demand → connection → satisfaction → reward → room/resident expansion loop.
 
-Session start/end, loss conditions, restart behavior, escalation, difficulty curve, timing, screen transitions, and persistence are Open Decisions.
+Escalation, difficulty curve, Survey destination, and Guide destination remain Open Decisions.
 
 ## Related Domains
 
@@ -37,7 +45,7 @@ All initial Domain Maps. Infinite Mode integrates them; it should not absorb the
 ## Modification Cautions
 
 - The scene and its shared prefabs are Exclusive Assets.
-- Do not add it to build settings during harness work.
+- Build-setting changes require a scoped scene-flow task and explicit Exclusive Assets.
 - Do not change hierarchy, lighting, camera, sorting, UI layout, or manager components without a scoped task and Human Decision where needed.
 - Drive scene integration through a live Editor in an isolated worktree; do not hand-edit YAML.
 

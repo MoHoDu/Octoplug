@@ -616,6 +616,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4750366236398259339, guid: 1808ff838f90a2b4bb394b232ee0f2d4, type: 3}
   m_PrefabInstance: {fileID: 834151305}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &834151307 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1756823108155598791, guid: 1808ff838f90a2b4bb394b232ee0f2d4, type: 3}
+  m_PrefabInstance: {fileID: 834151305}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &852114909
 GameObject:
   m_ObjectHideFlags: 0
@@ -1328,6 +1339,7 @@ GameObject:
   - component: {fileID: 1422431611}
   - component: {fileID: 1422431610}
   - component: {fileID: 1422431609}
+  - component: {fileID: 1422431613}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1420,6 +1432,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1422431613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1422431608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04cfba6235168dc408ee6af965f01eb5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Octoplug.GameFlow.Unity.ResultSceneController
+  roomCountText: {fileID: 834151307}
+  solvedDemandCountText: {fileID: 966661745}
+  failedDemandCountText: {fileID: 1981654951}
+  backToLobbyButton: {fileID: 1738518265}
 --- !u!1 &1587863792
 GameObject:
   m_ObjectHideFlags: 0
@@ -1477,7 +1505,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ccf29b3716dd23843a2f15969dc61da6, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e0ac907b12c18404597d760dd0d67a80, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

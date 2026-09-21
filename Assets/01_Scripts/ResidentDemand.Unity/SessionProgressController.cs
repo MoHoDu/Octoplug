@@ -27,6 +27,8 @@ namespace Octoplug.ResidentDemand.Unity
         public int CurrentExperience => RequireState().Experience;
         public int RequiredExperience => RequireState().RequiredExperience;
         public int RoomCount => RequireState().RoomCount;
+        public int SolvedDemandCount => RequireState().SolvedDemandCount;
+        public int FailedDemandCount => RequireState().FailedDemandCount;
         public bool IsSatisfactionDepleted => RequireState().IsSatisfactionDepleted;
         public float SatisfactionNormalized => RequireState().SatisfactionNormalized;
         public float ExperienceNormalized => RequireState().ExperienceNormalized;
