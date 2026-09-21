@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Octoplug.RoomGeneration;
 
@@ -14,6 +15,8 @@ namespace Octoplug.Power
         private static readonly HashSet<PowerStrip> PowerStrips = new();
         private static readonly HashSet<WallOutlet> WallOutlets = new();
         private static readonly Dictionary<UnityEngine.Component, RoomId> RoomOwners = new();
+
+        public static event Action<UnityEngine.Component, RoomId> ObjectFinalized;
 
         public static IEnumerable<ApplianceSource> GetProducts()
         {
@@ -80,6 +83,8 @@ namespace Octoplug.Power
                     WallOutlets.Add(wallOutlet);
                     break;
             }
+
+            ObjectFinalized?.Invoke(value, roomId);
         }
 
         internal static void Register(ApplianceSource value)

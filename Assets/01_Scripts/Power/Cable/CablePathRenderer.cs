@@ -43,6 +43,9 @@ namespace Octoplug.Power.Cable
 
         private bool baseCornerVerticesApplied;
         private bool flowCornerVerticesApplied;
+        private readonly List<Vector2> lastRenderedWorldPath = new();
+
+        public IReadOnlyList<Vector2> LastRenderedWorldPath => lastRenderedWorldPath;
 
         /// <summary>Renders a simplified version of the given world-space waypoints on Base (and Flow, if assigned).</summary>
         public void Render(IReadOnlyList<Vector2> worldWaypoints)
@@ -53,6 +56,8 @@ namespace Octoplug.Power.Cable
             }
 
             var simplified = Simplify(worldWaypoints);
+            lastRenderedWorldPath.Clear();
+            lastRenderedWorldPath.AddRange(simplified);
             if (simplified.Count < 2)
             {
                 Clear();
@@ -70,6 +75,7 @@ namespace Octoplug.Power.Cable
         /// </summary>
         public void Clear()
         {
+            lastRenderedWorldPath.Clear();
             Clear(line);
             Clear(flowLine);
         }

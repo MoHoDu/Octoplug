@@ -96,6 +96,14 @@ namespace Octoplug.Reward.Unity
                 return;
             }
 
+            Octoplug.Telemetry.SessionTelemetryService.Record(
+                "RewardPresented",
+                "Reward",
+                "RewardOffer",
+                $"reward-cycle-{currentCycle}",
+                string.Empty,
+                BuildRewardCandidatesPayload(candidates));
+
             if (rewardUi == null || !rewardUi.Show(
                     candidates,
                     reward => HandleRewardSelected(currentCycle, reward),
@@ -111,6 +119,10 @@ namespace Octoplug.Reward.Unity
             {
                 return;
             }
+
+            Octoplug.Telemetry.SessionTelemetryService.Record(
+                "RewardSelected", "Reward", "Reward", reward.Id, string.Empty,
+                $"{{\"Cycle\":{selectedCycle}}}");
 
             if (reward.TargetType == RewardTargetType.None)
             {
@@ -152,6 +164,12 @@ namespace Octoplug.Reward.Unity
                 return;
             }
 
+            Octoplug.Telemetry.SessionTelemetryService.Record(
+                "RewardPassed", "Reward", "RewardOffer",
+                $"reward-cycle-{selectedCycle}", string.Empty,
+                $"{{\"Cycle\":{selectedCycle}}}");
+            var summary = Octoplug.Telemetry.SessionTelemetryService.Recorder?.Document.Summary;
+            if (summary != null) summary.RewardPassedCount++;
             CompletePhase(selectedCycle);
         }
 
@@ -231,7 +249,23 @@ namespace Octoplug.Reward.Unity
                 }
             }
 
+            Octoplug.Telemetry.SessionTelemetryService.Record(
+                "RewardApplied", "Reward", "Reward", reward.Id, string.Empty,
+                $"{{\"TargetType\":\"{reward.TargetType}\"}}");
+            var summary = Octoplug.Telemetry.SessionTelemetryService.Recorder?.Document.Summary;
+            if (summary != null) summary.RewardSelectedCount++;
             return true;
+        }
+
+        private static string BuildRewardCandidatesPayload(IReadOnlyList<RewardBalanceRecord> candidates)
+        {
+            var ids = new string[candidates.Count];
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                ids[index] = candidates[index].Id;
+            }
+
+            return $"{{\"RewardIDs\":[\"{string.Join("\",\"", ids)}\"]}}";
         }
 
         private static List<RewardEffect> GetApplicationOrder(IReadOnlyList<RewardEffect> effects)

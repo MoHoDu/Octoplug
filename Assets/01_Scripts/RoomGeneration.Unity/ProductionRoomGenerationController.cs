@@ -156,6 +156,12 @@ namespace Octoplug.RoomGeneration.Unity
                 var promotedPlan = state.NextRoomPlan;
                 var promoted = promotedPlan.Room;
                 state = state.UnlockNext();
+                Octoplug.Telemetry.SessionTelemetryService.RecordRoom(promoted);
+                for (var doorIndex = 0; doorIndex < promotedPlan.DoorPlans.Count; doorIndex++)
+                {
+                    Octoplug.Telemetry.SessionTelemetryService.RecordDoor(promotedPlan.DoorPlans[doorIndex]);
+                }
+
                 using (RenderPromotionMarker.Auto())
                 {
                     RenderPromotion(promotedPlan);

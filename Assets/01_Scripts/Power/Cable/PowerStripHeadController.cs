@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Octoplug.Power.Grid;
 
@@ -20,6 +21,7 @@ namespace Octoplug.Power.Cable
     /// </summary>
     public class PowerStripHeadController : MonoBehaviour
     {
+        public static event Action<PowerStrip, Vector3, Vector3> MoveCommitted;
         [SerializeField]
         [Tooltip("The 'Head' child's drag input.")]
         private Octoplug.Power.Input.HeadDragInput headDragInput;
@@ -185,8 +187,13 @@ namespace Octoplug.Power.Cable
                 return false;
             }
 
+            var previous = dragStartPosition;
             MovePreservingPlug(position);
             ownCableController?.RecomputePathFromCurrentOrigin();
+            if ((transform.position - previous).sqrMagnitude > 0.000001f)
+            {
+                MoveCommitted?.Invoke(powerStrip, previous, transform.position);
+            }
             return true;
         }
 

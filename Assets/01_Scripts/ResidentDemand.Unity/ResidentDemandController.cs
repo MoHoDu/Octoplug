@@ -37,7 +37,9 @@ namespace Octoplug.ResidentDemand.Unity
 
         public event Action ResidentsChanged;
         public event Action AssignmentsChanged;
+        public event Action<ResidentDemandState> DemandCreated;
         public event Action<DemandOutcome> DemandResolved;
+        public event Action<ResidentDemandState, DemandOutcome> DemandResolvedDetailed;
 
         public IReadOnlyList<ResidentDemandState> Residents => _residents;
         public ProductAssignmentPlan CurrentAssignments => _currentAssignments;
@@ -90,6 +92,7 @@ namespace Octoplug.ResidentDemand.Unity
                     }
 
                     DemandResolved?.Invoke(outcome);
+                    DemandResolvedDetailed?.Invoke(resident, outcome);
                     changed = true;
                 }
                 else if (resident.Status == ResidentDemandStatus.Waiting &&
@@ -523,6 +526,7 @@ namespace Octoplug.ResidentDemand.Unity
             resident.StartDemand(demand);
             _requestSequenceByResident[resident.ResidentNumber.Value] =
                 _nextRequestSequence++;
+            DemandCreated?.Invoke(resident);
             GameplaySfxPlayer.Play(GameplaySfxCue.NeedSpawn);
         }
 

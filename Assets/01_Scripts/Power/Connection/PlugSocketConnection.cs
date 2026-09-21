@@ -14,6 +14,9 @@ namespace Octoplug.Power.Connection
     public static class PlugSocketConnection
     {
         public static event Action GraphChanged;
+        public static event Action<PlugConnector, SocketConnector> ConnectionCreated;
+        public static event Action<PlugConnector, SocketConnector> ConnectionRemoved;
+        public static event Action<PlugConnector, SocketConnector, string> ConnectionFailed;
 
         /// <summary>
         /// Connects <paramref name="plug"/> to <paramref name="socket"/> if
@@ -24,13 +27,21 @@ namespace Octoplug.Power.Connection
         /// </summary>
         public static bool Connect(PlugConnector plug, SocketConnector socket)
         {
-            if (plug == null || socket == null || !socket.IsActiveSocket)
+            if (plug == null || socket == null)
             {
+                ConnectionFailed?.Invoke(plug, socket, "MissingConnector");
+                return false;
+            }
+
+            if (!socket.IsActiveSocket)
+            {
+                ConnectionFailed?.Invoke(plug, socket, "InactiveSocket");
                 return false;
             }
 
             if (socket.IsConnected && socket.ConnectedPlug != plug)
             {
+                ConnectionFailed?.Invoke(plug, socket, "OccupiedSocket");
                 return false;
             }
 
@@ -43,6 +54,7 @@ namespace Octoplug.Power.Connection
             plug.AssignSocket(socket);
             socket.AssignPlug(plug);
             GraphChanged?.Invoke();
+            ConnectionCreated?.Invoke(plug, socket);
             GameplaySfxPlayer.Play(GameplaySfxCue.PlugConnect);
             return true;
         }
@@ -89,6 +101,7 @@ namespace Octoplug.Power.Connection
             if (notify)
             {
                 GraphChanged?.Invoke();
+                ConnectionRemoved?.Invoke(plug, socket);
             }
 
             return true;

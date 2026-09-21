@@ -13,6 +13,7 @@ Read only the domain relevant to the current task. Domain Maps describe evidence
 | Reward / Progression | [reward-progression.md](reward-progression.md) | Concept document only; implementation not established |
 | Infinite Mode | [infinite-mode.md](infinite-mode.md) | Main demo scene and cross-domain integration roots |
 | Audio | [audio.md](audio.md) | Runtime gameplay SFX catalog and authoritative one-shot triggers |
+| Telemetry | [telemetry.md](telemetry.md) | Local session JSON, replay events/geometry, snapshots, and finalized artifact ownership |
 
 ## Planned, Not Yet Mapped
 
