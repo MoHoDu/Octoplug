@@ -45,6 +45,8 @@ Current rules:
 - Product placement exhaustively searches full-footprint grid candidates, rejects positive-area authored-bounds overlap with Products/PowerStrips, and requires a production-routed path to a room-owned outlet within the initial cable length.
 - Accepted Products reserve their placement cells synchronously. Base-content shortfall rolls back generated equipment and restores the locked hint rather than leaving an empty unlocked Room.
 - Redistribution runs only after base content succeeds and adds at most one Product to each selected distinct Room.
+- Successful promotion renders only the promoted Room, newly committed Door views, and the following locked hint; immutable existing room walls and runtime doors are preserved. Full-state rendering remains the rollback/recovery path.
+- Promotion keeps one routing-grid rebuild before content placement and one authoritative rebuild after redistribution. Unity Profiler markers expose promotion/render/content/grid phases without gameplay telemetry or persistence.
 
 ## Design Direction
 

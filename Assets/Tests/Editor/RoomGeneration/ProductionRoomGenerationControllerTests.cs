@@ -220,6 +220,10 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             eventOrder.Clear();
 
             var storedHint = controller.State.NextRoomPlan.Room;
+            var existingDoor = controller.State.UnlockedLayout.Doors[0];
+            var existingDoorView = FindRuntimeDoor(existingDoor);
+            Assert.That(existingDoorView, Is.Not.Null);
+
             var promoted = controller.PromoteCurrentHint();
 
             Assert.That(promoted, Is.True);
@@ -227,6 +231,10 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             Assert.That(controller.State.UnlockedLayout.Doors, Has.Count.EqualTo(2));
             Assert.That(controller.State.UnlockedLayout.Rooms[2], Is.EqualTo(storedHint));
             Assert.That(eventOrder, Is.EqualTo(new[] { "unlocked", "content-ready", "next-hint" }));
+            Assert.That(
+                FindRuntimeDoor(existingDoor),
+                Is.SameAs(existingDoorView),
+                "A successful promotion must not destroy and recreate an existing Door view.");
 
             var promotedBinder = FindBinder(storedHint.Id);
             var roomArea = promotedBinder.GetComponent<RoomArea>();
@@ -332,6 +340,22 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             }
 
             return count;
+        }
+
+        private Transform FindRuntimeDoor(DoorPlan plan)
+        {
+            var mapped = DoorViewTransformMapper.Map(plan);
+            var owner = FindBinder(mapped.OwnerWall.RoomId);
+            var doors = owner.GetComponentsInChildren<Transform>(true);
+            for (var i = 0; i < doors.Length; i++)
+            {
+                if (doors[i].name.EndsWith("(Runtime)"))
+                {
+                    return doors[i];
+                }
+            }
+
+            return null;
         }
 
         private RoomGenerationRoomBinder FindBinder(RoomId roomId)
