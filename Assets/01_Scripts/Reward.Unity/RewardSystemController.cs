@@ -83,7 +83,7 @@ namespace Octoplug.Reward.Unity
                 placementService);
 
             var candidates = RewardCandidateGenerator.GenerateCandidates(
-                DefaultRewardBalance.GetDefaultRewards(),
+                Octoplug.Reward.RewardBalanceMapper.GetDefaultRewards(),
                 context,
                 3,
                 new System.Random());
@@ -205,7 +205,7 @@ namespace Octoplug.Reward.Unity
                         break;
                     case RewardEffectType.AddPowerStrip:
                         if (!TryRollSocketCount(
-                                DefaultSocketCountBalance.CreateMultitapCatalog(),
+                                Octoplug.RoomGeneration.RoomContentBalanceMapper.CreatePowerStripCatalog(),
                                 1,
                                 5,
                                 out var powerStripSocketCount))

@@ -1,58 +1,35 @@
-using System;
 using System.Collections.Generic;
+using Octoplug.Balance;
 
 namespace Octoplug.ResidentDemand
 {
     public static class DemandAuthoringMapper
     {
-        public static DemandBalanceRecord Map(DemandAuthoringRow row)
+        public static DemandBalanceCatalog MapAll()
         {
-            if (row == null)
+            var rows = new List<DemandAuthoringRow>();
+            var archive = BalanceRegistry.Instance;
+            if (archive != null)
             {
-                throw new ArgumentNullException(nameof(row));
+                foreach (var row in archive.DemandRows)
+                {
+                    rows.Add(new DemandAuthoringRow(
+                        row.id,
+                        row.enabled,
+                        row.requiredRoomCount,
+                        row.weight,
+                        row.firstNeed,
+                        row.secondNeed,
+                        row.satisfactionFillSeconds,
+                        row.patienceFillSeconds,
+                        row.experienceReward,
+                        row.globalSatisfactionOnSuccess,
+                        row.globalSatisfactionOnFailure,
+                        row.cooldownSeconds
+                    ));
+                }
             }
-
-            var needs = new List<ResidentNeedType>(2)
-            {
-                MapNeed(row.FirstNeed),
-            };
-
-            if (!string.IsNullOrWhiteSpace(row.SecondNeed))
-            {
-                needs.Add(MapNeed(row.SecondNeed));
-            }
-
-            return new DemandBalanceRecord(
-                row.Id,
-                row.Enabled,
-                row.RequiredRoomCount,
-                row.Weight,
-                needs,
-                row.SatisfactionFillSeconds,
-                row.PatienceFillSeconds,
-                row.ExperienceReward,
-                row.GlobalSatisfactionOnSuccess,
-                row.GlobalSatisfactionOnFailure,
-                row.CooldownSeconds);
-        }
-
-        public static ResidentNeedType MapNeed(string authoringValue)
-        {
-            switch (authoringValue)
-            {
-                case "Cold":
-                    return ResidentNeedType.Cooling;
-                case "Hot":
-                    return ResidentNeedType.Heating;
-                case "Food":
-                    return ResidentNeedType.Meal;
-                case "Fun":
-                    return ResidentNeedType.Fun;
-                default:
-                    throw new ArgumentException(
-                        $"Unsupported resident need authoring value '{authoringValue}'.",
-                        nameof(authoringValue));
-            }
+            return DemandBalanceCatalog.FromAuthoringRows(rows);
         }
     }
 }
