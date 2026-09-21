@@ -61,32 +61,9 @@ namespace Octoplug.RoomGeneration
             return list;
         }
 
-        public static IReadOnlyList<SocketCountWeight> CreateWallOutletCatalog()
-        {
-            var list = new List<SocketCountWeight>();
-            var archive = BalanceRegistry.Instance;
-            if (archive != null)
-            {
-                foreach (var row in archive.WallOutletSpawnRows)
-                {
-                    list.Add(new SocketCountWeight(row.socketCount, row.weight));
-                }
-            }
-            return list;
-        }
+        public static SocketCountWeightCatalog CreateWallOutletCatalog() { var list = new List<SocketCountWeightAuthoringRow>(); var archive = BalanceRegistry.Instance; if (archive != null) { foreach (var row in archive.WallOutletSpawnRows) { list.Add(new SocketCountWeightAuthoringRow(row.socketCount, row.weight)); } } return SocketCountWeightCatalog.FromAuthoringRows(list); }
 
-        public static IReadOnlyList<SocketCountWeight> CreatePowerStripCatalog()
-        {
-            var list = new List<SocketCountWeight>();
-            var archive = BalanceRegistry.Instance;
-            if (archive != null)
-            {
-                foreach (var row in archive.PowerStripSpawnRows)
-                {
-                    list.Add(new SocketCountWeight(row.socketCount, row.weight));
-                }
-            }
-            return list;
-        }
+        public static SocketCountWeightCatalog CreatePowerStripCatalog() { var list = new List<SocketCountWeightAuthoringRow>(); var archive = BalanceRegistry.Instance; if (archive != null) { foreach (var row in archive.PowerStripSpawnRows) { list.Add(new SocketCountWeightAuthoringRow(row.socketCount, row.weight)); } } return SocketCountWeightCatalog.FromAuthoringRows(list); }
     }
 }
+
