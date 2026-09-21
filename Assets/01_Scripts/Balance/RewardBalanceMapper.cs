@@ -18,9 +18,12 @@ namespace Octoplug.Reward
                     
                     list.Add(new RewardBalanceRecord(
                         row.rewardId,
-                        targetType,
-                        row.weight,
+                        true,
                         row.minRoomCount,
+                        row.weight,
+                        row.rewardId,
+                        string.Empty,
+                        targetType,
                         new[] { new RewardEffect(effectType, row.effectValue) }
                     ));
                 }

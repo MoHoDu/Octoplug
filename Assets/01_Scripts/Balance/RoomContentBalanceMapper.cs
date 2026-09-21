@@ -42,14 +42,22 @@ namespace Octoplug.RoomGeneration
             {
                 foreach (var row in archive.StarterConfigRows)
                 {
+                    int tv = 0, fan = 0, heater = 0, induction = 0, air = 0;
+                    string type = row.productType?.ToLower() ?? "";
+                    if (type.Contains("tv")) tv = row.productCount;
+                    else if (type.Contains("fan")) fan = row.productCount;
+                    else if (type.Contains("heater")) heater = row.productCount;
+                    else if (type.Contains("induction")) induction = row.productCount;
+                    else if (type.Contains("air")) air = row.productCount;
+
                     list.Add(new StarterRoomConfigRecord(
                         row.starterRoomIndex,
                         row.enabled,
-                        row.tvCount,
-                        row.fanCount,
-                        row.heaterCount,
-                        row.inductionCount,
-                        row.airConditionerCount,
+                        tv,
+                        fan,
+                        heater,
+                        induction,
+                        air,
                         row.wallOutletCount,
                         row.wallOutletSocketMin,
                         row.wallOutletSocketMax,
@@ -66,4 +74,3 @@ namespace Octoplug.RoomGeneration
         public static SocketCountWeightCatalog CreatePowerStripCatalog() { var list = new List<SocketCountWeightAuthoringRow>(); var archive = BalanceRegistry.Instance; if (archive != null) { foreach (var row in archive.PowerStripSpawnRows) { list.Add(new SocketCountWeightAuthoringRow(row.socketCount, row.weight)); } } return SocketCountWeightCatalog.FromAuthoringRows(list); }
     }
 }
-

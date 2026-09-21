@@ -50,7 +50,7 @@ namespace Octoplug.RoomGeneration.Unity
             if (housePowerBudget == null)
             {
 #if UNITY_6000_0_OR_NEWER
-                housePowerBudget = Object.FindAnyObjectByType<HousePowerBudget>();
+                housePowerBudget = UnityEngine.Object.FindAnyObjectByType<HousePowerBudget>();
 #else
                 housePowerBudget = FindObjectOfType<HousePowerBudget>();
 #endif
