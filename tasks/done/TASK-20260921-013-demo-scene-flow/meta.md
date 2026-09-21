@@ -10,7 +10,7 @@
 - **Branch:** feat/demo-scene-flow
 - **Worktree:** `D:\github-worktrees\Octoplug\demo-scene-flow`
 - **Started/Updated:** 2026-09-21
-- **Current Stage:** automated verification and Human Verification preparation
+- **Current Stage: done
 - **Verification:** HUMAN_VERIFY_REQUIRED
 
 ## Scope

@@ -9,7 +9,7 @@
 - **Branch:** feat/reward-system
 - **Started:** 2026-09-21
 - **Updated:** 2026-09-21
-- **Current Stage:** implementation
+- **Current Stage: done
 - **Current Skill:** implement-code
 ## Allowed Scope
 - Reward catalog, applicability, application, and target-selection lifecycle
@@ -47,4 +47,4 @@
 - None.
 ## Verification State
 - Prior milestone Human Verification passed; expanded scope is implementing.
-- Verification: HUMAN_VERIFY_REQUIRED
+- Verification: HUMAN_VERIFY_PASS (Merged to dev)

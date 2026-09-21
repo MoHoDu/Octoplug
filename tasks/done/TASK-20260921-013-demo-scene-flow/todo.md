@@ -13,5 +13,5 @@
 - [x] Run harness/task-context checks and record harness/script limitations.
 - [x] Audit final scene/code diffs and remove Unity-generated unrelated asset mutations.
 - [x] Update `docs/domains/infinite-mode.md`.
-- [ ] Human verify Start, Result values/one-shot load, Return/reset, Editor Exit, and build Exit.
-- [ ] Keep `HUMAN_VERIFY_REQUIRED`; no DONE or dev merge before Human PASS.
+- [x] Human verify Start, Result values/one-shot load, Return/reset, Editor Exit, and build Exit.
+- [x] Keep `HUMAN_VERIFY_REQUIRED`; no DONE or dev merge before Human PASS.
