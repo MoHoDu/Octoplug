@@ -125,6 +125,168 @@ namespace Octoplug.Tests.Editor.GameFlow
             return new DemandOutcome(demand, resolution);
         }
 
+        [TestCase(40)]
+        [TestCase(45)]
+        public void RoomThreeThreshold_PromotesRoomFourAtOrAboveRequiredExperience(int experienceReward)
+        {
+            while (roomGen.State.UnlockedLayout.Rooms.Count < 3)
+            {
+                Assert.That(roomGen.PromoteCurrentHint(), Is.True);
+            }
+
+            sessionProgress.AcknowledgeExperienceThreshold(3, resetExperience: true);
+            var initialResidents = residentDemand.Residents.Count;
+
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(DemandResolution.Success, experienceReward, 0));
+
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.CameraReveal));
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(4));
+            Assert.That(residentDemand.Residents.Count, Is.EqualTo(initialResidents + 1));
+            Assert.That(sessionProgress.CurrentExperience, Is.Zero);
+            Assert.That(sessionProgress.RoomCount, Is.EqualTo(4));
+            Assert.That(sessionProgress.RequiredExperience, Is.EqualTo(50));
+        }
+
+        [Test]
+        public void SuccessfulPromotion_AcknowledgesExperienceAndRequestsRewardAfterReveal()
+        {
+            var initialRooms = roomGen.State.UnlockedLayout.Rooms.Count;
+            var rewardRequests = 0;
+            gameFlow.RewardPhaseRequested += () => rewardRequests++;
+
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(
+                    DemandResolution.Success,
+                    sessionProgress.RequiredExperience,
+                    0));
+
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(initialRooms + 1));
+            Assert.That(sessionProgress.CurrentExperience, Is.Zero);
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.CameraReveal));
+
+            var revealCompleted = typeof(RoomGenerationCameraFramingBridge).GetMethod(
+                "OnCameraRevealCompleted",
+                System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Instance);
+            revealCompleted.Invoke(cameraBridge, null);
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.RewardDelay));
+
+            var rewardDelay = typeof(GameFlowManager).GetMethod(
+                "RewardDelayRoutine",
+                System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Instance);
+            var routine = (IEnumerator)rewardDelay.Invoke(gameFlow, null);
+            routine.MoveNext();
+            routine.MoveNext();
+
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.AwaitingReward));
+            Assert.That(rewardRequests, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void FailedPromotion_RearmsThresholdAndRetriesWithoutRequestingReward()
+        {
+            var attempts = 0;
+            var rewardRequests = 0;
+            var initialRooms = roomGen.State.UnlockedLayout.Rooms.Count;
+            var initialResidents = residentDemand.Residents.Count;
+            gameFlow.RewardPhaseRequested += () => rewardRequests++;
+            gameFlow.InitializeForVerification(() =>
+            {
+                attempts++;
+                return attempts > 1 && roomGen.PromoteCurrentHint();
+            });
+
+            var requiredExperience = sessionProgress.RequiredExperience;
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(
+                    DemandResolution.Success,
+                    requiredExperience,
+                    0));
+
+            Assert.That(attempts, Is.EqualTo(1));
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(sessionProgress.CurrentExperience, Is.GreaterThanOrEqualTo(requiredExperience));
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(initialRooms));
+            Assert.That(residentDemand.Residents.Count, Is.EqualTo(initialResidents));
+            Assert.That(rewardRequests, Is.Zero);
+
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(DemandResolution.Success, 1, 0));
+
+            Assert.That(attempts, Is.EqualTo(2));
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.CameraReveal));
+            Assert.That(roomGen.State.UnlockedLayout.Rooms.Count, Is.EqualTo(initialRooms + 1));
+            Assert.That(residentDemand.Residents.Count, Is.EqualTo(initialResidents + 1));
+            Assert.That(sessionProgress.CurrentExperience, Is.Zero);
+            Assert.That(rewardRequests, Is.Zero);
+        }
+
+        [Test]
+        public void PromotionException_RearmsThresholdAndRestoresPlaying()
+        {
+            gameFlow.InitializeForVerification(
+                () => throw new System.InvalidOperationException("promotion failed"));
+            LogAssert.Expect(
+                LogType.Exception,
+                new System.Text.RegularExpressions.Regex("InvalidOperationException: promotion failed"));
+
+            var requiredExperience = sessionProgress.RequiredExperience;
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(
+                    DemandResolution.Success,
+                    requiredExperience,
+                    0));
+
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(sessionProgress.CurrentExperience, Is.GreaterThanOrEqualTo(requiredExperience));
+
+            var retryAttempts = 0;
+            gameFlow.InitializeForVerification(() =>
+            {
+                retryAttempts++;
+                return roomGen.PromoteCurrentHint();
+            });
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(DemandResolution.Success, 1, 0));
+
+            Assert.That(retryAttempts, Is.EqualTo(1));
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.CameraReveal));
+        }
+
+        [Test]
+        public void MissingNextRoomPlan_RearmsThresholdAndRestoresPlaying()
+        {
+            var stateField = typeof(ProductionRoomGenerationController).GetField(
+                "state",
+                System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Instance);
+            stateField.SetValue(
+                roomGen,
+                new Octoplug.RoomGeneration.RoomGenerationState(
+                    roomGen.State.UnlockedLayout));
+            var thresholdSignals = 0;
+            var rewardRequests = 0;
+            sessionProgress.ExperienceThresholdReached += () => thresholdSignals++;
+            gameFlow.RewardPhaseRequested += () => rewardRequests++;
+
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(
+                    DemandResolution.Success,
+                    sessionProgress.RequiredExperience,
+                    0));
+            sessionProgress.ApplyOutcomeForVerification(
+                CreateDummyOutcome(DemandResolution.Success, 1, 0));
+
+            Assert.That(thresholdSignals, Is.EqualTo(2));
+            Assert.That(gameFlow.CurrentState, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(
+                sessionProgress.CurrentExperience,
+                Is.GreaterThanOrEqualTo(sessionProgress.RequiredExperience));
+            Assert.That(rewardRequests, Is.Zero);
+        }
+
         [UnityTest]
         public IEnumerator ScenariosAtoH_FullFlow()
         {

@@ -53,6 +53,7 @@ namespace Octoplug.Telemetry
 
         private void OnDisable()
         {
+            FinalizeSession("RuntimeDisabled");
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             SceneManager.sceneUnloaded -= HandleSceneUnloaded;
             RuntimeWorldRegistry.ObjectFinalized -= HandleObjectFinalized;
@@ -72,6 +73,11 @@ namespace Octoplug.Telemetry
 
             nextSnapshotTime = Time.realtimeSinceStartup + SnapshotIntervalSeconds;
             RecordSnapshot(false);
+        }
+
+        public void FinalizeForVerification(string reason)
+        {
+            FinalizeSession(reason);
         }
 
         [ContextMenu("Debug/Save Telemetry Checkpoint")]

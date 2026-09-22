@@ -214,6 +214,8 @@ namespace Octoplug.RoomGeneration.Unity
                 ? instance.GetComponent<ApplianceSource>()
                 : null;
             var candidateFailure = "no placement candidate was accepted";
+            var reachabilityFailed = false;
+            var reachabilityDiagnostics = new ProductReachabilityDiagnostics();
 
             bool found = RoomObjectPlacementPlanner.TryFindPosition(
                 room,
@@ -222,17 +224,24 @@ namespace Octoplug.RoomGeneration.Unity
                 socketCount: 0,
                 (candidate, bounds) =>
                 {
+                    reachabilityDiagnostics.RecordCandidate();
                     instance.transform.position = candidate;
                     Physics2D.SyncTransforms();
                     if (OverlapsPlacementObject(footprint, bounds))
                     {
+                        reachabilityDiagnostics.RecordOverlap();
                         candidateFailure =
                             "all otherwise valid positions overlap a Product or PowerStrip";
                         return false;
                     }
 
-                    if (!CanReachWallOutlet(product, room, grid))
+                    if (!CanReachWallOutlet(
+                            product,
+                            room,
+                            grid,
+                            reachabilityDiagnostics))
                     {
+                        reachabilityFailed = true;
                         candidateFailure =
                             "no usable room Wall Outlet socket is reachable within the Product's initial CableLength";
                         return false;
@@ -245,7 +254,13 @@ namespace Octoplug.RoomGeneration.Unity
 
             if (!found)
             {
-                if (!string.IsNullOrEmpty(candidateFailure))
+                if (reachabilityFailed)
+                {
+                    failure =
+                        "no usable room Wall Outlet socket is reachable within the Product's initial CableLength"
+                        + $" ({reachabilityDiagnostics.Describe()})";
+                }
+                else if (!string.IsNullOrEmpty(candidateFailure))
                 {
                     failure = candidateFailure;
                 }
@@ -368,6 +383,12 @@ namespace Octoplug.RoomGeneration.Unity
                 RollBackRoomContent(generatedObjects);
                 return false;
             }
+
+            // Product reachability must use a routing/physics snapshot taken
+            // after the new terminal is finalized. This is the single required
+            // mid-transaction rebuild; the caller still owns the authoritative
+            // post-redistribution rebuild from TASK-016.
+            gridService.RebuildFromScene();
 
             string productFailure = "required Product was not finalized";
             if (isStarterRoom && starterProduct == null)
@@ -538,18 +559,177 @@ namespace Octoplug.RoomGeneration.Unity
             return placedWalls.Count;
         }
 
-        private static bool CanReachWallOutlet(ApplianceSource product, RoomPlacement room, CableRoutingGrid grid)
+        private static bool CanReachWallOutlet(
+            ApplianceSource product,
+            RoomPlacement room,
+            CableRoutingGrid grid,
+            ProductReachabilityDiagnostics diagnostics)
         {
-            if (product == null || product.Cable == null || product.Cable.Origin == null) return false;
+            if (product == null || product.Cable == null || product.Cable.Origin == null)
+            {
+                diagnostics.RecordMissingCable();
+                return false;
+            }
+
+            var origin = (Vector2)product.Cable.Origin.position;
+            var cableLength = product.Cable.CableLength;
+            diagnostics.RecordOrigin(grid, origin, cableLength);
             foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
             {
-                if (outlet == null || !RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner) || owner != room.Id) continue;
+                diagnostics.RecordOutletSeen();
+                if (outlet == null
+                    || !RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                    || owner != room.Id)
+                {
+                    continue;
+                }
+
+                diagnostics.RecordRoomOutlet();
                 foreach (var socket in outlet.ActiveSockets)
                 {
-                    if (socket != null && !socket.IsConnected && CableRouteReachability.IsWithinLength(grid, product.Cable.Origin.position, socket, product.Cable.CableLength)) return true;
+                    diagnostics.RecordActiveSocket();
+                    if (socket == null || socket.IsConnected)
+                    {
+                        continue;
+                    }
+
+                    diagnostics.RecordFreeSocket();
+                    if (!CableRouteReachability.TryGetLength(
+                            grid,
+                            origin,
+                            socket,
+                            approachSearchRadius: 3,
+                            out var routedLength,
+                            terminalFrontOnly: true))
+                    {
+                        diagnostics.RecordUnroutableSocket(grid, socket);
+                        continue;
+                    }
+
+                    diagnostics.RecordRoutedSocket(grid, socket, routedLength);
+                    if (routedLength <= cableLength + 0.001f)
+                    {
+                        return true;
+                    }
                 }
             }
+
             return false;
+        }
+
+        private sealed class ProductReachabilityDiagnostics
+        {
+            private int candidateCount;
+            private int overlapCount;
+            private int outletCount;
+            private int roomOutletCount;
+            private int activeSocketCount;
+            private int freeSocketCount;
+            private int unroutableSocketCount;
+            private int routedSocketCount;
+            private bool missingCable;
+            private float cableLength;
+            private float shortestRoutedLength = float.PositiveInfinity;
+            private Vector2 lastOrigin;
+            private GridCoord lastOriginCell;
+            private GridCellState lastOriginState;
+            private Vector2 lastSocketPosition;
+            private GridCoord lastSocketCell;
+            private GridCellState lastSocketState;
+            private Vector2 lastSocketApproach;
+
+            public void RecordCandidate() => candidateCount++;
+
+            public void RecordOverlap() => overlapCount++;
+
+            public void RecordMissingCable() => missingCable = true;
+
+            public void RecordOutletSeen() => outletCount++;
+
+            public void RecordRoomOutlet() => roomOutletCount++;
+
+            public void RecordActiveSocket() => activeSocketCount++;
+
+            public void RecordFreeSocket() => freeSocketCount++;
+
+            public void RecordOrigin(
+                CableRoutingGrid grid,
+                Vector2 origin,
+                float currentCableLength)
+            {
+                cableLength = currentCableLength;
+                lastOrigin = origin;
+                if (grid == null)
+                {
+                    return;
+                }
+
+                lastOriginCell = grid.WorldToCell(origin);
+                lastOriginState = grid.GetState(lastOriginCell);
+            }
+
+            public void RecordUnroutableSocket(
+                CableRoutingGrid grid,
+                SocketConnector socket)
+            {
+                unroutableSocketCount++;
+                RecordSocket(grid, socket);
+            }
+
+            public void RecordRoutedSocket(
+                CableRoutingGrid grid,
+                SocketConnector socket,
+                float routedLength)
+            {
+                routedSocketCount++;
+                shortestRoutedLength = Mathf.Min(shortestRoutedLength, routedLength);
+                RecordSocket(grid, socket);
+            }
+
+            public string Describe()
+            {
+                if (missingCable)
+                {
+                    return "Product Cable or Cable origin is unavailable";
+                }
+
+                var summary =
+                    $"candidates={candidateCount}, overlaps={overlapCount}, "
+                    + $"outletChecks(all/room)={outletCount}/{roomOutletCount}, "
+                    + $"socketChecks(active/free)={activeSocketCount}/{freeSocketCount}, "
+                    + $"routeChecks(found/missing)={routedSocketCount}/{unroutableSocketCount}, "
+                    + $"CableLength={cableLength:0.###}";
+                if (routedSocketCount > 0)
+                {
+                    return summary
+                        + $", shortestRoute={shortestRoutedLength:0.###}";
+                }
+
+                return summary
+                    + $", origin={lastOrigin} cell={lastOriginCell}:{lastOriginState}, "
+                    + $"socket={lastSocketPosition} cell={lastSocketCell}:{lastSocketState}, "
+                    + $"approach={lastSocketApproach}";
+            }
+
+            private void RecordSocket(
+                CableRoutingGrid grid,
+                SocketConnector socket)
+            {
+                if (socket == null)
+                {
+                    return;
+                }
+
+                lastSocketPosition = socket.ConnectorTransform.position;
+                lastSocketApproach = socket.ApproachDirection;
+                if (grid == null)
+                {
+                    return;
+                }
+
+                lastSocketCell = grid.WorldToCell(lastSocketPosition);
+                lastSocketState = grid.GetState(lastSocketCell);
+            }
         }
 
         private static bool OverlapsPlacementObject(PlacementFootprint candidate, Bounds candidateBounds)

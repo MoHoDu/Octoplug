@@ -95,6 +95,11 @@ namespace Octoplug.ResidentDemand.Unity
                 requiredExperience);
         }
 
+        public void RearmExperienceThreshold()
+        {
+            RequireState().RearmExperienceThreshold();
+        }
+
         public void AcknowledgeExperienceThreshold(int newRoomCount, bool resetExperience)
         {
             RequireState().AcknowledgeExperienceThreshold(newRoomCount, resetExperience);

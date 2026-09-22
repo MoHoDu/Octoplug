@@ -49,7 +49,7 @@ The following phrases from older documents no longer reflect the authoritative d
 - `RequiredExperienceImporter` defines the future Sheet-editable schema as `RoomCount` and `RequiredEXP`; no runtime Google Sheet transport exists.
 - `SessionProgressController` consumes `ResidentDemandController.DemandResolved`, while `SessionProgressHudCoordinator` presents state through the existing `GameStatusInfo` sliders.
 - Satisfaction below 30 uses `#FF0032`; 30 and above restores the authored green. EXP preserves the authored orange fill.
-- Threshold acknowledgement/reset is an explicit API reserved for future GameFlow. Reaching a threshold does not currently generate a Room or Resident, reveal Camera, pause, delay, or open Rewards.
+- GameFlow acknowledges and resets EXP only after successful Room promotion. If the stored hint is unavailable, promotion returns false, or promotion throws, it re-arms the one-shot threshold signal without changing EXP or RoomCount so a later EXP gain can retry progression.
 
 Persistence, Reward catalogs/application, Target Selection, and final Game Over presentation are not established.
 

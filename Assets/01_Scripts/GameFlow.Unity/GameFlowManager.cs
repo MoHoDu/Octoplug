@@ -25,13 +25,16 @@ namespace Octoplug.GameFlow.Unity
         [SerializeField] private bool rewardRequested;
         [SerializeField] private bool isGameOver;
 
+        private Func<bool> promotionRequestForVerification;
+
         public event Action RewardPhaseRequested;
         public event Action GameOverRequested;
 
         public GameFlowState CurrentState => currentState;
 
-        public void InitializeForVerification()
+        public void InitializeForVerification(Func<bool> promotionRequest = null)
         {
+            promotionRequestForVerification = promotionRequest;
             if (sessionProgress != null)
             {
                 sessionProgress.ExperienceThresholdReached -= HandleExperienceThresholdReached;
@@ -110,44 +113,62 @@ namespace Octoplug.GameFlow.Unity
 
             currentState = GameFlowState.RoomProgression;
 
-            if (roomGeneration != null && roomGeneration.State.HasNextRoomPlan)
+            if (roomGeneration == null
+                || roomGeneration.State == null
+                || !roomGeneration.State.HasNextRoomPlan)
             {
-                var nextRoom = roomGeneration.State.NextRoomPlan.Room;
-                bool promoted = roomGeneration.PromoteCurrentHint();
+                RestorePlayingAfterFailedProgression();
+                return;
+            }
 
-                if (promoted)
-                {
-                    if (sessionProgress != null)
-                    {
-                        sessionProgress.AcknowledgeExperienceThreshold(
-                            roomGeneration.State.UnlockedLayout.Rooms.Count,
-                            resetExperience: true);
-                    }
+            var nextRoom = roomGeneration.State.NextRoomPlan.Room;
+            bool promoted;
+            try
+            {
+                promoted = promotionRequestForVerification != null
+                    ? promotionRequestForVerification()
+                    : roomGeneration.PromoteCurrentHint();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                RestorePlayingAfterFailedProgression();
+                return;
+            }
 
-                    if (residentDemand != null)
-                    {
-                        residentDemand.AddResident();
-                    }
+            if (!promoted)
+            {
+                RestorePlayingAfterFailedProgression();
+                return;
+            }
 
-                    currentState = GameFlowState.CameraReveal;
-                    if (cameraBridge != null)
-                    {
-                        cameraBridge.RequestRoomReveal(nextRoom);
-                    }
-                    else
-                    {
-                        HandleCameraRevealCompleted();
-                    }
-                }
-                else
-                {
-                    currentState = GameFlowState.Playing;
-                }
+            if (sessionProgress != null)
+            {
+                sessionProgress.AcknowledgeExperienceThreshold(
+                    roomGeneration.State.UnlockedLayout.Rooms.Count,
+                    resetExperience: true);
+            }
+
+            if (residentDemand != null)
+            {
+                residentDemand.AddResident();
+            }
+
+            currentState = GameFlowState.CameraReveal;
+            if (cameraBridge != null)
+            {
+                cameraBridge.RequestRoomReveal(nextRoom);
             }
             else
             {
-                currentState = GameFlowState.Playing;
+                HandleCameraRevealCompleted();
             }
+        }
+
+        private void RestorePlayingAfterFailedProgression()
+        {
+            currentState = GameFlowState.Playing;
+            sessionProgress?.RearmExperienceThreshold();
         }
 
         private void HandleCameraRevealCompleted()

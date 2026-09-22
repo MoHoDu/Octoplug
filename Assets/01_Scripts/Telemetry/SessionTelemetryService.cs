@@ -33,6 +33,13 @@ namespace Octoplug.Telemetry
             recorder.Start();
         }
 
+        public static void SetRecorderForVerification(SessionTelemetryRecorder verificationRecorder)
+        {
+            recorder = verificationRecorder;
+            RuntimeIds.Clear();
+            nextRuntimeId = 0;
+        }
+
         public static void Record(
             string eventType,
             string category,

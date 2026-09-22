@@ -63,6 +63,35 @@ namespace Octoplug.Tests.Editor.ResidentDemand
             Assert.That(depleted, Is.EqualTo(1));
         }
 
+        [TestCase(40)]
+        [TestCase(45)]
+        public void State_RearmPreservesRoomThreeProgressAndAllowsThresholdRetry(int initialReward)
+        {
+            var progress = new SessionProgressState(
+                100,
+                0,
+                3,
+                new RequiredExperienceTable(new[]
+                {
+                    new RequiredExperienceEntry(3, 40),
+                }));
+            var thresholdCount = 0;
+            progress.ExperienceThresholdReached += () => thresholdCount++;
+
+            progress.Apply(Outcome(DemandResolution.Success, initialReward));
+
+            Assert.That(thresholdCount, Is.EqualTo(1));
+            Assert.That(progress.RoomCount, Is.EqualTo(3));
+            Assert.That(progress.Experience, Is.EqualTo(initialReward));
+
+            progress.RearmExperienceThreshold();
+            progress.Apply(Outcome(DemandResolution.Success, 1));
+
+            Assert.That(thresholdCount, Is.EqualTo(2));
+            Assert.That(progress.RoomCount, Is.EqualTo(3));
+            Assert.That(progress.Experience, Is.EqualTo(initialReward + 1));
+        }
+
         // [Test]
         public void Config_UsesExplicitRowsAndRejectsDuplicateRoomCounts()
         {
@@ -131,7 +160,7 @@ namespace Octoplug.Tests.Editor.ResidentDemand
             });
         }
 
-        private static DemandOutcome Outcome(DemandResolution resolution)
+        private static DemandOutcome Outcome(DemandResolution resolution, int experienceReward = 10)
         {
             return new DemandOutcome(
                 new DemandBalanceRecord(
@@ -142,7 +171,7 @@ namespace Octoplug.Tests.Editor.ResidentDemand
                     new[] { ResidentNeedType.Fun },
                     1f,
                     1f,
-                    10,
+                    experienceReward,
                     5,
                     -8,
                     0f),

@@ -2,7 +2,7 @@
 
 ## Runtime artifact
 
-InfiniteMode automatically creates a schema-v1 in-memory recorder. Events append in memory; disk writes occur only for an explicit checkpoint or session finalization.
+InfiniteMode automatically creates a schema-v1 in-memory recorder. Events append in memory; disk writes occur only for an explicit checkpoint or session finalization. Game Over, InfiniteMode scene unload, and runtime shutdown (including stopping Play Mode) finalize the active session.
 
 Finalized files:
 

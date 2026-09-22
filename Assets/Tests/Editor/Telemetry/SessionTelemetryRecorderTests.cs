@@ -18,6 +18,7 @@ namespace Octoplug.Tests.Editor.Telemetry
         [TearDown]
         public void TearDown()
         {
+            SessionTelemetryService.SetRecorderForVerification(null);
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
 
@@ -88,6 +89,28 @@ namespace Octoplug.Tests.Editor.Telemetry
             Assert.That(recorder.TryFinalize("Test", out var expected), Is.True);
             Assert.That(recorder.TryGetLatestCompletedSession(out var actual), Is.True);
             Assert.That(actual.Path, Is.EqualTo(expected.Path));
+        }
+
+        [Test]
+        public void RuntimeDisable_FinalizesActiveSessionExactlyOnce()
+        {
+            var recorder = new SessionTelemetryRecorder(root, () => 3f);
+            recorder.Start();
+            SessionTelemetryService.SetRecorderForVerification(recorder);
+            var owner = new GameObject("Session Telemetry Test");
+            var runtime = owner.AddComponent<SessionTelemetryRuntime>();
+
+            runtime.FinalizeForVerification("RuntimeDisabled");
+
+            Assert.That(recorder.Document.IsFinalized, Is.True);
+            Assert.That(recorder.TryGetLatestCompletedSession(out var artifact), Is.True);
+            Assert.That(File.Exists(artifact.Path), Is.True);
+            Assert.That(recorder.Document.Events.FindAll(value => value.EventType == "SessionEnded"), Has.Count.EqualTo(1));
+
+            Object.DestroyImmediate(owner);
+
+            Assert.That(recorder.Document.Events.FindAll(value => value.EventType == "SessionEnded"), Has.Count.EqualTo(1));
+            Assert.That(Directory.GetFiles(Path.GetDirectoryName(artifact.Path), "*_completed.json"), Has.Length.EqualTo(1));
         }
     }
 }

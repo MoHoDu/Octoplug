@@ -15,7 +15,8 @@ namespace Octoplug.Power.Routing
             Vector2 originPosition,
             SocketConnector socket,
             int approachSearchRadius,
-            out float length)
+            out float length,
+            bool terminalFrontOnly = false)
         {
             length = 0f;
             if (!TryBuildPath(
@@ -24,7 +25,8 @@ namespace Octoplug.Power.Routing
                     socket,
                     approachSearchRadius,
                     minRenderSegmentLength: 0.15f,
-                    out var points))
+                    out var points,
+                    terminalFrontOnly))
             {
                 return false;
             }
@@ -39,7 +41,8 @@ namespace Octoplug.Power.Routing
             SocketConnector socket,
             int approachSearchRadius,
             float minRenderSegmentLength,
-            out List<Vector2> worldPath)
+            out List<Vector2> worldPath,
+            bool terminalFrontOnly = false)
         {
             worldPath = null;
             if (grid == null
@@ -57,6 +60,7 @@ namespace Octoplug.Power.Routing
                     grid,
                     socket,
                     approachSearchRadius,
+                    terminalFrontOnly,
                     out var approachCell)
                 || !GridPathfinder.TryFindPath(
                     grid,
@@ -98,12 +102,18 @@ namespace Octoplug.Power.Routing
             CableRoutingGrid grid,
             SocketConnector socket,
             int searchRadius,
+            bool terminalFrontOnly,
             out GridCoord approachCell)
         {
             var socketPosition = (Vector2)socket.ConnectorTransform.position;
             var socketCell = grid.WorldToCell(socketPosition);
             approachCell = socketCell;
-            if (grid.IsWalkable(socketCell))
+            if (grid.IsWalkable(socketCell)
+                && (!terminalFrontOnly
+                    || !socket.IsTerminalEndpoint
+                    || Vector2.Dot(
+                        grid.CellToWorld(socketCell) - socketPosition,
+                        socket.ApproachDirection) > 0.001f))
             {
                 return true;
             }
@@ -124,9 +134,14 @@ namespace Octoplug.Power.Routing
                     if (socket.IsTerminalEndpoint)
                     {
                         var dot = Vector2.Dot(candidatePosition - socketPosition, socket.ApproachDirection);
-                        // Allow front (dot > 0) and back (dot < 0) for shared walls.
-                        // Reject only if it's perfectly orthogonal (approaching from inside the wall).
-                        if (Mathf.Abs(dot) < 0.001f)
+                        // Normal gameplay keeps supporting either side of a
+                        // shared wall. Generated Room content can opt into the
+                        // terminal's authored room-facing side so a sub-cell
+                        // Socket offset cannot select the adjacent Room and
+                        // inflate the required Cable route through a Door.
+                        if (terminalFrontOnly
+                            ? dot <= 0.001f
+                            : Mathf.Abs(dot) < 0.001f)
                         {
                             continue;
                         }

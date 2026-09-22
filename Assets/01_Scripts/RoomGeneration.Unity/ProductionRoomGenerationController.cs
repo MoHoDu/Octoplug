@@ -156,11 +156,6 @@ namespace Octoplug.RoomGeneration.Unity
                 var promotedPlan = state.NextRoomPlan;
                 var promoted = promotedPlan.Room;
                 state = state.UnlockNext();
-                Octoplug.Telemetry.SessionTelemetryService.RecordRoom(promoted);
-                for (var doorIndex = 0; doorIndex < promotedPlan.DoorPlans.Count; doorIndex++)
-                {
-                    Octoplug.Telemetry.SessionTelemetryService.RecordDoor(promotedPlan.DoorPlans[doorIndex]);
-                }
 
                 using (RenderPromotionMarker.Auto())
                 {
@@ -180,6 +175,14 @@ namespace Octoplug.RoomGeneration.Unity
                             this);
                         return false;
                     }
+                }
+
+                // Content finalization is the promotion commit boundary. Telemetry
+                // must never retain geometry that the transaction rolls back.
+                Octoplug.Telemetry.SessionTelemetryService.RecordRoom(promoted);
+                for (var doorIndex = 0; doorIndex < promotedPlan.DoorPlans.Count; doorIndex++)
+                {
+                    Octoplug.Telemetry.SessionTelemetryService.RecordDoor(promotedPlan.DoorPlans[doorIndex]);
                 }
 
                 RoomUnlocked?.Invoke(promoted);

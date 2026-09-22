@@ -6,8 +6,10 @@ using Octoplug.Power.Grid;
 using Octoplug.Power.Routing;
 using Octoplug.RoomGeneration;
 using Octoplug.RoomGeneration.Unity;
+using Octoplug.Telemetry;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Octoplug.Tests.Editor.RoomGeneration
 {
@@ -19,6 +21,7 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         private ProductionRoomGenerationController controller;
         private CableRoutingGridService gridService;
         private Transform roomsRoot;
+        private string telemetryRoot;
 
         [SetUp]
         public void SetUp()
@@ -57,6 +60,7 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         [TearDown]
         public void TearDown()
         {
+            SessionTelemetryService.SetRecorderForVerification(null);
             for (var i = createdObjects.Count - 1; i >= 0; i--)
             {
                 if (createdObjects[i] != null)
@@ -66,6 +70,11 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             }
 
             createdObjects.Clear();
+            if (!string.IsNullOrEmpty(telemetryRoot)
+                && System.IO.Directory.Exists(telemetryRoot))
+            {
+                System.IO.Directory.Delete(telemetryRoot, true);
+            }
         }
 
         [Test]
@@ -210,6 +219,110 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         }
 
         [Test]
+        public void PromoteCurrentHint_RefreshesGridBeforeRequiredProductReachability()
+        {
+            ConfigureProductionContent();
+            controller.Initialize();
+            var promotedRoom = controller.State.NextRoomPlan.Room;
+            var initialRoomCount = controller.State.UnlockedLayout.Rooms.Count;
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True);
+
+            Assert.That(
+                controller.State.UnlockedLayout.Rooms.Count,
+                Is.EqualTo(initialRoomCount + 1));
+            Assert.That(CountWallOutlets(promotedRoom.Id), Is.EqualTo(1));
+            Assert.That(CountProducts(promotedRoom.Id), Is.EqualTo(1));
+
+            ApplianceSource product = null;
+            foreach (var candidate in RuntimeWorldRegistry.GetProducts())
+            {
+                if (RuntimeWorldRegistry.TryGetRoomOwner(candidate, out var owner)
+                    && owner == promotedRoom.Id)
+                {
+                    product = candidate;
+                    break;
+                }
+            }
+
+            SocketConnector socket = null;
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (!RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                    || owner != promotedRoom.Id)
+                {
+                    continue;
+                }
+
+                foreach (var candidate in outlet.ActiveSockets)
+                {
+                    socket = candidate;
+                    break;
+                }
+            }
+
+            Assert.That(product, Is.Not.Null);
+            Assert.That(socket, Is.Not.Null);
+        }
+
+        [Test]
+        public void ConsecutivePromotions_GenerateRequiredContentThroughRoomFour()
+        {
+            ConfigureProductionContent();
+            controller.Initialize();
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True, "Room 3 promotion");
+            var roomFour = controller.State.NextRoomPlan.Room;
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True, "Room 4 promotion");
+            Assert.That(controller.State.UnlockedLayout.Rooms, Has.Count.EqualTo(4));
+            Assert.That(CountWallOutlets(roomFour.Id), Is.EqualTo(1));
+            Assert.That(CountProducts(roomFour.Id), Is.EqualTo(1));
+
+            ApplianceSource roomFourProduct = null;
+            foreach (var product in RuntimeWorldRegistry.GetProducts())
+            {
+                if (RuntimeWorldRegistry.TryGetRoomOwner(product, out var owner)
+                    && owner == roomFour.Id)
+                {
+                    roomFourProduct = product;
+                    break;
+                }
+            }
+
+            SocketConnector roomFourSocket = null;
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (!RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                    || owner != roomFour.Id)
+                {
+                    continue;
+                }
+
+                foreach (var socket in outlet.ActiveSockets)
+                {
+                    roomFourSocket = socket;
+                    break;
+                }
+            }
+
+            Assert.That(roomFourProduct, Is.Not.Null);
+            Assert.That(roomFourSocket, Is.Not.Null);
+            Assert.That(
+                CableRouteReachability.TryGetLength(
+                    gridService.Grid,
+                    roomFourProduct.Cable.Origin.position,
+                    roomFourSocket,
+                    approachSearchRadius: 3,
+                    out var routedLength,
+                    terminalFrontOnly: true),
+                Is.True);
+            Assert.That(
+                routedLength,
+                Is.LessThanOrEqualTo(roomFourProduct.Cable.CableLength + 0.001f));
+        }
+
+        [Test]
         public void PromoteCurrentHint_PromotesStoredPlanThenCreatesFollowingHint()
         {
             var eventOrder = new List<string>();
@@ -247,6 +360,77 @@ namespace Octoplug.Tests.Editor.RoomGeneration
                 Is.EqualTo(GridCellState.Walkable));
             Assert.That(controller.State.HasNextRoomPlan, Is.True);
             Assert.That(controller.State.NextRoomPlan.Room.Id, Is.Not.EqualTo(storedHint.Id));
+        }
+
+        [Test]
+        public void FailedPromotion_DoesNotRecordRolledBackRoomOrDoorTelemetry()
+        {
+            controller.Initialize();
+            var failedPlan = controller.State.NextRoomPlan;
+            var content = controller.gameObject.AddComponent<RoomContentGenerationController>();
+            var serializedContent = new SerializedObject(content);
+            serializedContent.FindProperty("roomGeneration").objectReferenceValue = controller;
+            serializedContent.ApplyModifiedPropertiesWithoutUndo();
+            var serializedController = new SerializedObject(controller);
+            serializedController.FindProperty("roomContentGeneration").objectReferenceValue = content;
+            serializedController.ApplyModifiedPropertiesWithoutUndo();
+            var recorder = StartTelemetryRecorder();
+            var initialRoomCount = recorder.Document.Rooms.Count;
+            var initialDoorCount = recorder.Document.Doors.Count;
+            LogAssert.Expect(
+                LogType.Warning,
+                new System.Text.RegularExpressions.Regex("\\[RoomContentRequiredInfrastructure\\]"));
+            LogAssert.Expect(
+                LogType.Warning,
+                $"Room content generation failed for {failedPlan.Room.Id}; the locked Room hint was restored.");
+
+            Assert.That(controller.PromoteCurrentHint(), Is.False);
+
+            Assert.That(controller.State.NextRoomPlan.Room.Id, Is.EqualTo(failedPlan.Room.Id));
+            Assert.That(recorder.Document.Rooms, Has.Count.EqualTo(initialRoomCount));
+            Assert.That(recorder.Document.Doors, Has.Count.EqualTo(initialDoorCount));
+            Assert.That(
+                recorder.Document.Events.FindAll(value =>
+                    value.EventType == "RoomUnlocked"
+                    && value.EntityID == failedPlan.Room.Id.Value),
+                Is.Empty);
+            Assert.That(
+                recorder.Document.Events.FindAll(value =>
+                    value.EventType == "DoorCreated"
+                    && value.Payload.Contains(failedPlan.Room.Id.Value)),
+                Is.Empty);
+        }
+
+        [Test]
+        public void SuccessfulPromotion_RecordsCommittedRoomAndDoorExactlyOnce()
+        {
+            controller.Initialize();
+            var promotedPlan = controller.State.NextRoomPlan;
+            var recorder = StartTelemetryRecorder();
+            controller.RoomUnlocked += room =>
+            {
+                SessionTelemetryService.RecordRoom(room);
+                for (var i = 0; i < promotedPlan.DoorPlans.Count; i++)
+                {
+                    SessionTelemetryService.RecordDoor(promotedPlan.DoorPlans[i]);
+                }
+            };
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True);
+
+            Assert.That(
+                recorder.Document.Rooms.FindAll(value =>
+                    value.RoomID == promotedPlan.Room.Id.Value),
+                Has.Count.EqualTo(1));
+            Assert.That(
+                recorder.Document.Events.FindAll(value =>
+                    value.EventType == "RoomUnlocked"
+                    && value.EntityID == promotedPlan.Room.Id.Value),
+                Has.Count.EqualTo(1));
+            Assert.That(recorder.Document.Doors, Has.Count.EqualTo(promotedPlan.DoorPlans.Count));
+            Assert.That(
+                recorder.Document.Events.FindAll(value => value.EventType == "DoorCreated"),
+                Has.Count.EqualTo(promotedPlan.DoorPlans.Count));
         }
 
         [Test]
@@ -310,6 +494,17 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             serializedController.FindProperty("roomContentGeneration")
                 .objectReferenceValue = content;
             serializedController.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private SessionTelemetryRecorder StartTelemetryRecorder()
+        {
+            telemetryRoot = System.IO.Path.Combine(
+                Application.temporaryCachePath,
+                "octoplug-room-promotion-" + System.Guid.NewGuid().ToString("N"));
+            var recorder = new SessionTelemetryRecorder(telemetryRoot, () => 0f);
+            recorder.Start();
+            SessionTelemetryService.SetRecorderForVerification(recorder);
+            return recorder;
         }
 
         private static int CountProducts(RoomId roomId)

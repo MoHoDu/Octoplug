@@ -97,6 +97,14 @@ namespace Octoplug.ResidentDemand
             }
         }
 
+        public void RearmExperienceThreshold()
+        {
+            if (_experienceThresholdPublished && Experience >= RequiredExperience)
+            {
+                _experienceThresholdPublished = false;
+            }
+        }
+
         public void AcknowledgeExperienceThreshold(int newRoomCount, bool resetExperience)
         {
             if (newRoomCount < 1)
