@@ -126,3 +126,6 @@ InitTestScene*.unity*
 # Per-developer workspace files
 /.vscode/
 /TODO.md
+
+
+.env.local
