@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Octoplug.GameFlow;
@@ -130,6 +131,74 @@ namespace Octoplug.Tests.Editor.GameFlow
 
             Assert.That(starts, Is.EqualTo(1));
             Assert.That(exits, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void LobbySurveyButton_InvokesInjectedRequestOncePerClick()
+        {
+            var root = Track(new GameObject("Lobby Survey"));
+            var controller = root.AddComponent<LobbySceneController>();
+            var startButton = CreateButton(root.transform, "InfiniteMode");
+            var exitButton = CreateButton(root.transform, "Exit");
+            var surveyButton = CreateButton(root.transform, "Servey");
+            var surveyRequests = 0;
+            IEnumerator SurveyRequest()
+            {
+                surveyRequests++;
+                yield break;
+            }
+            controller.InitializeForVerification(
+                startButton,
+                exitButton,
+                () => { },
+                () => { },
+                surveyButton,
+                SurveyRequest);
+
+            surveyButton.onClick.Invoke();
+
+            Assert.That(surveyRequests, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ResultController_AutoSurveyStartsExactlyOnce()
+        {
+            var root = Track(new GameObject("Result Survey"));
+            root.SetActive(false);
+            var controller = root.AddComponent<ResultSceneController>();
+            var roomText = CreateText(root.transform, "Room");
+            var solvedText = CreateText(root.transform, "Solved");
+            var failedText = CreateText(root.transform, "Failed");
+            var backButton = CreateButton(root.transform, "BackToLobby");
+            var surveyRequests = 0;
+            IEnumerator EmptyRequest()
+            {
+                yield break;
+            }
+            IEnumerator SurveyRequest()
+            {
+                return EmptyRequest();
+            }
+            Func<IEnumerator> countedRequest = () =>
+            {
+                surveyRequests++;
+                return SurveyRequest();
+            };
+            controller.InitializeForVerification(
+                roomText,
+                solvedText,
+                failedText,
+                backButton,
+                () => { },
+                countedRequest);
+            SessionResultStore.Publish(new SessionResultSnapshot(1, 0, 0));
+
+            root.SetActive(true);
+            controller.StartAutoSurveyForVerification();
+            root.SetActive(false);
+            root.SetActive(true);
+
+            Assert.That(surveyRequests, Is.EqualTo(1));
         }
 
         [Test]

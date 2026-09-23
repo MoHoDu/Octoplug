@@ -9,7 +9,8 @@ Session Telemetry records an InfiniteMode run as low-overhead in-memory events a
 - Persistent anonymous `UserID`; immutable per-run `SessionID`.
 - No personal identifiers, device identifiers, accounts, network addresses, advertising IDs, or location.
 - Files live below `Application.persistentDataPath/OctoplugLogs/{UserID}/sessions/`.
-- Google upload, Sheet write, Form opening, dashboards, and servers are outside this domain.
+- Upload and Form opening are owned by `Assets/01_Scripts/SurveySubmission/`; telemetry only exposes the authoritative finalized artifact.
+- Sheet write, dashboards, and servers remain outside the Unity client.
 
 ## Performance Boundary
 

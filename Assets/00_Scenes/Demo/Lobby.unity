@@ -2478,6 +2478,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.GameFlow.Unity.LobbySceneController
   infiniteModeButton: {fileID: 308002797}
+  surveyButton: {fileID: 1920432204}
   exitButton: {fileID: 1777999832}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

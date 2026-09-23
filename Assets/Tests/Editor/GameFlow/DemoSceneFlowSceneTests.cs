@@ -32,7 +32,7 @@ namespace Octoplug.Tests.Editor.GameFlow
         }
 
         [Test]
-        public void Lobby_BindsOnlyExistingStartAndExitButtons()
+        public void Lobby_BindsExistingStartSurveyAndExitButtons()
         {
             var scene = EditorSceneManager.OpenScene(DemoSceneNames.LobbyPath);
             var controller = FindUnique<LobbySceneController>(scene);
@@ -41,6 +41,11 @@ namespace Octoplug.Tests.Editor.GameFlow
             Assert.That(
                 LocalId(serialized.FindProperty("infiniteModeButton").objectReferenceValue),
                 Is.EqualTo(308002797));
+            Assert.That(
+                LocalId(serialized.FindProperty("surveyButton").objectReferenceValue),
+                Is.EqualTo(1920432204));
+            Assert.That(serialized.FindProperty("surveyButton").objectReferenceValue.name,
+                Is.EqualTo("Servey"));
             Assert.That(
                 LocalId(serialized.FindProperty("exitButton").objectReferenceValue),
                 Is.EqualTo(1777999832));

@@ -122,6 +122,7 @@ InitTestScene*.unity*
 /.harness/local/
 /.harness/cache/
 /.harness/logs/
+/Assets/StreamingAssets/OctoplugGenerated/
 
 # Per-developer workspace files
 /.vscode/

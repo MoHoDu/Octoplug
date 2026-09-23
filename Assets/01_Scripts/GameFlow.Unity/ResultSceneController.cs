@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using Octoplug.SurveySubmission;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,6 +15,8 @@ namespace Octoplug.GameFlow.Unity
         [SerializeField] private Button backToLobbyButton;
 
         private Action returnToLobby = DemoSceneFlow.ReturnToLobby;
+        private Func<IEnumerator> openSurvey;
+        private bool autoSurveyStarted;
 
         private void OnEnable()
         {
@@ -22,6 +26,7 @@ namespace Octoplug.GameFlow.Unity
             }
 
             BindStoredSnapshot();
+            StartAutoSurveyOnce();
         }
 
         private void OnDisable()
@@ -37,7 +42,8 @@ namespace Octoplug.GameFlow.Unity
             TMP_Text solvedText,
             TMP_Text failedText,
             Button lobbyButton,
-            Action lobbyRequest)
+            Action lobbyRequest,
+            Func<IEnumerator> surveyRequest = null)
         {
             if (backToLobbyButton != null)
             {
@@ -57,6 +63,7 @@ namespace Octoplug.GameFlow.Unity
                 ? lobbyButton
                 : throw new ArgumentNullException(nameof(lobbyButton));
             returnToLobby = lobbyRequest ?? throw new ArgumentNullException(nameof(lobbyRequest));
+            openSurvey = surveyRequest;
             backToLobbyButton.onClick.AddListener(HandleBackToLobbyClicked);
         }
 
@@ -83,6 +90,32 @@ namespace Octoplug.GameFlow.Unity
             }
 
             Bind(snapshot);
+        }
+
+        public void StartAutoSurveyForVerification()
+        {
+            StartAutoSurveyOnce();
+        }
+
+        private void StartAutoSurveyOnce()
+        {
+            if (autoSurveyStarted) return;
+            autoSurveyStarted = true;
+            if (openSurvey != null)
+            {
+                StartCoroutine(openSurvey());
+                return;
+            }
+
+            SurveySubmissionRuntime.SubmitLatest(LogSurveyOutcome, true);
+        }
+
+        private void LogSurveyOutcome(SurveySubmissionOutcome outcome)
+        {
+            if (outcome != SurveySubmissionOutcome.Opened)
+            {
+                Debug.LogWarning($"Automatic survey could not be opened ({outcome}).", this);
+            }
         }
 
         private void HandleBackToLobbyClicked()

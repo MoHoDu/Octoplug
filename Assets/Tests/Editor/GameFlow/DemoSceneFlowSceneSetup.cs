@@ -29,10 +29,12 @@ namespace Octoplug.EditorSetup
             var scene = EditorSceneManager.OpenScene(DemoSceneNames.LobbyPath);
             var canvas = FindUnique<Canvas>(scene, component => component.name == "Canvas");
             var infiniteMode = FindByLocalId<Button>(scene, 308002797);
+            var survey = FindByLocalId<Button>(scene, 1920432204);
             var exit = FindByLocalId<Button>(scene, 1777999832);
             var controller = GetOrAdd<LobbySceneController>(canvas.gameObject);
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("infiniteModeButton").objectReferenceValue = infiniteMode;
+            serialized.FindProperty("surveyButton").objectReferenceValue = survey;
             serialized.FindProperty("exitButton").objectReferenceValue = exit;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorSceneManager.SaveScene(scene);
