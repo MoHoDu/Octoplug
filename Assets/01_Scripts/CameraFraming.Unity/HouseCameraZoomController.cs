@@ -1,5 +1,4 @@
 using System;
-using Octoplug.CameraFraming;
 using Octoplug.RoomGeneration;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -7,17 +6,8 @@ using UnityEngine.Serialization;
 
 namespace Octoplug.CameraFraming.Unity
 {
-    /// <summary>
-    /// Owns the Cinemachine 2D orthographic zoom: clamps and smooths manual zoom input, keeps a
-    /// dynamic maximum zoom-out derived from the current house bounds, and performs one-shot
-    /// zoom-only hint-room framing without moving the camera or locking further manual zoom.
-    /// </summary>
-    /// <remarks>
-    /// The framing UX is designed and tuned against <see cref="CameraDesignReference"/>
-    /// (1920x1080, 16:9). Every calculation here reads <c>outputCamera.aspect</c> at the moment
-    /// it runs, never a hardcoded pixel resolution, so a device running at a different aspect
-    /// still gets bounds that fully fit the screen instead of clipping.
-    /// </remarks>
+    /// <summary>최초 fit과 수동 Zoom 보정, 위치를 보존하는 Hint/Reveal을 pre-Brain tick에서 처리한다.</summary>
+    [DefaultExecutionOrder(0)]
     public sealed class HouseCameraZoomController : MonoBehaviour
     {
         [Header("Cinemachine")]
@@ -26,6 +16,10 @@ namespace Octoplug.CameraFraming.Unity
 
         [SerializeField]
         private Camera outputCamera;
+
+        [Tooltip("가용 화면과 Pan을 공유하는 명시 참조. 미지정된 기존 사용처는 전체 viewport로 동작합니다.")]
+        [SerializeField]
+        private HouseCameraPanController cameraPan;
 
         [Header("Input")]
         [Tooltip("Reads raw mouse-wheel / touchpad-scroll / pinch input; kept separate so this class only owns zoom-range and Cinemachine control.")]
@@ -37,13 +31,13 @@ namespace Octoplug.CameraFraming.Unity
         [SerializeField]
         private float minOrthographicSize = 5f;
 
-        [Tooltip("[Zoom] / [Hint Framing] World-unit padding kept around the house bounds (dynamic max zoom-out) AND around a framed Hint Room's full bounds, so content is not flush against the screen edge. Shared between both uses intentionally: both describe the same 'breathing room around visible content' concept.")]
+        [Tooltip("최초 화면 fit과 수동 Zoom 범위 계산에 사용하는 집 경계 여백(world units). 자동 Hint/Reveal에는 적용하지 않습니다.")]
         [FormerlySerializedAs("houseFramingMargin")]
         [SerializeField]
         private float houseFramingMargin = 2f;
 
         [Header("[Zoom] Feel")]
-        [Tooltip("[Zoom] Approximate seconds for the zoom to settle on its target size after Wheel/Touchpad/Pinch input or Hint framing. Zero applies the target immediately.")]
+        [Tooltip("[Zoom] Approximate seconds for zoom and manual boundary correction to settle. Zero applies the target immediately.")]
         [FormerlySerializedAs("zoomSmoothTime")]
         [SerializeField]
         private float zoomSmoothing = 0.15f;
@@ -53,6 +47,16 @@ namespace Octoplug.CameraFraming.Unity
         private ZoomRange zoomRange;
         private bool initialized;
         private bool revealCompletionPending;
+        private RoomBounds2D revealBounds;
+        private bool hintFramingPending;
+        private RoomBounds2D pendingHintBounds;
+        private bool initialFramingPending;
+        private bool initialFramingCompleted;
+        private RoomBounds2D initialVisibleBounds;
+        private bool hasHouseBounds;
+        private RoomBounds2D houseBounds;
+        private bool manualCorrectionPending;
+        private Vector2 correctionVelocity;
 
         public event Action CameraMotionStarted;
         public event Action CameraRevealCompleted;
@@ -70,7 +74,12 @@ namespace Octoplug.CameraFraming.Unity
 
         public void TickForVerification()
         {
-            Update();
+            Tick(Time.unscaledDeltaTime);
+        }
+
+        public void TickForVerification(float unscaledDeltaTime)
+        {
+            Tick(unscaledDeltaTime);
         }
 #endif
 
@@ -86,7 +95,7 @@ namespace Octoplug.CameraFraming.Unity
                 throw new InvalidOperationException($"{nameof(HouseCameraZoomController)} requires a Cinemachine camera and an output camera reference.");
             }
 
-            if (minOrthographicSize <= 0f || float.IsNaN(minOrthographicSize) || float.IsInfinity(minOrthographicSize))
+            if (!IsPositiveFinite(minOrthographicSize))
             {
                 throw new InvalidOperationException($"{nameof(HouseCameraZoomController)} minimum orthographic size must be positive.");
             }
@@ -95,6 +104,7 @@ namespace Octoplug.CameraFraming.Unity
             zoomRange = new ZoomRange(minOrthographicSize, targetOrthographicSize);
             cinemachineCamera.Lens.OrthographicSize = targetOrthographicSize;
             initialized = true;
+            cameraPan?.SetFrameDriver(this);
         }
 
         private void OnEnable()
@@ -103,6 +113,7 @@ namespace Octoplug.CameraFraming.Unity
             {
                 zoomInput.ZoomDeltaRequested += ApplyZoomDelta;
             }
+            cameraPan?.SetFrameDriver(this);
         }
 
         private void OnDisable()
@@ -111,44 +122,118 @@ namespace Octoplug.CameraFraming.Unity
             {
                 zoomInput.ZoomDeltaRequested -= ApplyZoomDelta;
             }
+            cameraPan?.SetFrameDriver(null);
+            cameraPan?.DiscardQueuedPixelPan();
         }
 
-        private void Update()
+        private void LateUpdate()
+        {
+            Tick(Time.unscaledDeltaTime);
+        }
+
+        private void Tick(float deltaTime)
         {
             if (!initialized)
             {
                 return;
             }
 
-            var current = cinemachineCamera.Lens.OrthographicSize;
-            if (!Mathf.Approximately(current, targetOrthographicSize))
+            // 시작 생성의 연속 이벤트를 모두 모은 뒤 실제 Canvas layout으로 최초 화면을 정한다.
+            if (initialFramingPending)
             {
-                var next = zoomSmoothing <= 0f
-                    ? targetOrthographicSize
-                    : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity, zoomSmoothing, Mathf.Infinity, Time.unscaledDeltaTime);
-                if (Mathf.Abs(next - targetOrthographicSize) <= 0.001f)
-                {
-                    next = targetOrthographicSize;
-                }
-
-                cinemachineCamera.Lens.OrthographicSize = next;
-                if (Time.timeScale == 0f && outputCamera != null)
-                {
-                    outputCamera.orthographicSize = next;
-                }
+                Canvas.ForceUpdateCanvases();
             }
 
+            if (!TryGetUsableViewport(out var viewport)
+                || (initialFramingPending && !TryApplyInitialFraming(viewport)))
+            {
+                cameraPan?.DiscardQueuedPixelPan();
+                return;
+            }
+
+            RefreshDynamicRange(viewport);
+            var framingReady = true;
+            if (hintFramingPending)
+            {
+                hintFramingPending = !TryApplyFixedCenterFraming(pendingHintBounds, viewport);
+                framingReady = !hintFramingPending;
+            }
+            if (revealCompletionPending)
+            {
+                framingReady &= TryApplyFixedCenterFraming(revealBounds, viewport);
+            }
+            if (!framingReady)
+            {
+                // 화면은 유효하므로 사용자가 중심을 옮겨 불가능한 fixed fit을 복구할 수 있다.
+                // 자동 Lens/위치 이동과 완료만 보류하고 다음 tick에 다시 판정한다.
+                cameraPan?.ApplyQueuedPixelPan();
+                return;
+            }
+
+            SmoothLens(deltaTime);
+            CorrectManualPosition(viewport, deltaTime);
+            cameraPan?.ApplyQueuedPixelPan();
             CompleteRevealIfSettled();
         }
 
-        /// <summary>Applies a manual zoom-input delta (from <see cref="CameraZoomInputReader"/>), clamped to the current zoom range.</summary>
-        public void ApplyZoomDelta(float sizeDelta)
+        private void SmoothLens(float deltaTime)
         {
-            if (!initialized || sizeDelta == 0f)
+            var current = cinemachineCamera.Lens.OrthographicSize;
+            if (Mathf.Approximately(current, targetOrthographicSize))
             {
                 return;
             }
 
+            var next = zoomSmoothing <= 0f
+                ? targetOrthographicSize
+                : Mathf.SmoothDamp(current, targetOrthographicSize, ref zoomVelocity,
+                    zoomSmoothing, Mathf.Infinity, Mathf.Max(0f, deltaTime));
+            if (Mathf.Abs(next - targetOrthographicSize) <= 0.001f)
+            {
+                next = targetOrthographicSize;
+                zoomVelocity = 0f;
+            }
+            SetLens(next);
+        }
+
+        private void CorrectManualPosition(UsableViewport viewport, float deltaTime)
+        {
+            if (!manualCorrectionPending || cameraPan == null
+                || !cameraPan.TryGetCorrectionTarget(viewport, out var target))
+            {
+                return;
+            }
+
+            var position = cinemachineCamera.transform.position;
+            var current = new Vector2(position.x, position.y);
+            // 매 tick의 최근접 안전 위치까지만 보정한다. Lens보다 늦게 남은 오차도 마무리한다.
+            var next = zoomSmoothing <= 0f
+                ? target
+                : Vector2.SmoothDamp(current, target, ref correctionVelocity,
+                    zoomSmoothing, Mathf.Infinity, Mathf.Max(0f, deltaTime));
+            next.x = Mathf.Clamp(next.x, Mathf.Min(current.x, target.x), Mathf.Max(current.x, target.x));
+            next.y = Mathf.Clamp(next.y, Mathf.Min(current.y, target.y), Mathf.Max(current.y, target.y));
+            if ((next - target).sqrMagnitude <= 0.000001f)
+            {
+                next = target;
+                correctionVelocity = Vector2.zero;
+                if (Mathf.Approximately(cinemachineCamera.Lens.OrthographicSize, targetOrthographicSize))
+                {
+                    manualCorrectionPending = false;
+                }
+            }
+            SetPosition(new Vector3(next.x, next.y, position.z));
+        }
+
+        public void ApplyZoomDelta(float sizeDelta)
+        {
+            if (!initialized || sizeDelta == 0f || float.IsNaN(sizeDelta) || float.IsInfinity(sizeDelta)
+                || initialFramingPending || !TryGetUsableViewport(out var viewport))
+            {
+                return;
+            }
+
+            RefreshDynamicRange(viewport);
             var nextTarget = zoomRange.Clamp(targetOrthographicSize + sizeDelta);
             if (Mathf.Approximately(nextTarget, targetOrthographicSize))
             {
@@ -156,41 +241,98 @@ namespace Octoplug.CameraFraming.Unity
             }
 
             targetOrthographicSize = nextTarget;
+            // Reveal/대기 중 Hint의 위치 보존 계약은 수동 입력과 겹쳐도 우선한다.
+            manualCorrectionPending = !revealCompletionPending && !hintFramingPending;
             CameraMotionStarted?.Invoke();
         }
 
-        /// <summary>Recomputes the dynamic maximum zoom-out from the current full house bounds.</summary>
-        public void RecomputeDynamicMaxOrthographicSize(RoomBounds2D houseBounds)
+        public void RecomputeDynamicMaxOrthographicSize(RoomBounds2D bounds)
+        {
+            if (!bounds.IsValid)
+            {
+                throw new ArgumentException("House bounds must be valid.", nameof(bounds));
+            }
+
+            houseBounds = bounds;
+            hasHouseBounds = true;
+            if (initialized && TryGetUsableViewport(out var viewport))
+            {
+                RefreshDynamicRange(viewport);
+            }
+        }
+
+        private void RefreshDynamicRange(UsableViewport viewport)
+        {
+            if (hasHouseBounds && viewport.TryComputeInitialFit(houseBounds, outputCamera.aspect,
+                houseFramingMargin, minOrthographicSize, out var houseMax, out _))
+            {
+                zoomRange = new ZoomRange(minOrthographicSize, Mathf.Max(houseMax, targetOrthographicSize));
+            }
+        }
+
+        // 최초 tick 전에는 마지막 visible bounds로 덮어쓰며, 완료 후 호출은 수락하지 않는다.
+        public bool QueueInitialFraming(RoomBounds2D visibleBounds)
+        {
+            if (initialFramingCompleted)
+            {
+                return false;
+            }
+            if (!visibleBounds.IsValid)
+            {
+                throw new ArgumentException("Visible bounds must be valid.", nameof(visibleBounds));
+            }
+
+            initialVisibleBounds = visibleBounds;
+            initialFramingPending = true;
+            hintFramingPending = false;
+            CancelManualCorrection();
+            return true;
+        }
+
+        private bool TryApplyInitialFraming(UsableViewport viewport)
+        {
+            if (!viewport.TryComputeInitialFit(initialVisibleBounds, outputCamera.aspect,
+                houseFramingMargin, minOrthographicSize, out var size, out var center))
+            {
+                return false;
+            }
+
+            var previous = cinemachineCamera.transform.position;
+            var position = new Vector3(center.X, center.Y, previous.z);
+            var changed = previous != position || !Mathf.Approximately(cinemachineCamera.Lens.OrthographicSize, size);
+            targetOrthographicSize = size;
+            zoomVelocity = 0f;
+            zoomRange = new ZoomRange(minOrthographicSize, size);
+            CancelManualCorrection();
+            SetLens(size);
+            SetPosition(position);
+            initialFramingPending = false;
+            initialFramingCompleted = true;
+            if (changed)
+            {
+                CameraMotionStarted?.Invoke();
+            }
+            return true;
+        }
+
+        public void RequestHintFraming(RoomBounds2D hintBounds)
         {
             if (!initialized)
             {
                 return;
             }
 
-            var houseMax = DynamicZoomLimit.ComputeMaxOrthographicSize(houseBounds, outputCamera.aspect, houseFramingMargin, minOrthographicSize);
-
-            // A previous hint may have widened the effective range beyond the unlocked-House max.
-            // Recomputing after that hint is promoted must not pull the current target inward before
-            // the following hint is framed: automatic framing is zoom-out-only. Manual zoom-in can
-            // still lower the target, after which a later recompute may naturally narrow the range.
-            var effectiveMax = Math.Max(houseMax, targetOrthographicSize);
-            zoomRange = new ZoomRange(minOrthographicSize, effectiveMax);
+            CancelManualCorrection();
+            // 수동 zoom-in의 잔여 속도가 자동 zoom-out 첫 tick을 거꾸로 움직이지 않게 한다.
+            zoomVelocity = 0f;
+            pendingHintBounds = hintBounds;
+            hintFramingPending = true;
+            if (!initialFramingPending && TryGetUsableViewport(out var viewport))
+            {
+                hintFramingPending = !TryApplyFixedCenterFraming(hintBounds, viewport);
+            }
         }
 
-        /// <summary>
-        /// One-shot: zooms out just enough (if at all) so the hint room's FULL bounds — not just
-        /// its center — fit within the current camera position. Never zooms in and never moves
-        /// the camera.
-        /// </summary>
-        public void RequestHintFraming(RoomBounds2D hintBounds)
-        {
-            RequestZoomOutFraming(hintBounds);
-        }
-
-        /// <summary>
-        /// Requests an externally orchestrated room reveal and reports completion after the
-        /// zoom-only framing target is reached. The request never moves the camera or zooms in.
-        /// </summary>
         public void RequestRoomReveal(RoomBounds2D roomBounds)
         {
             if (!initialized)
@@ -198,50 +340,45 @@ namespace Octoplug.CameraFraming.Unity
                 return;
             }
 
+            CancelManualCorrection();
+            zoomVelocity = 0f;
+            revealBounds = roomBounds;
             revealCompletionPending = true;
-            RequestZoomOutFraming(roomBounds);
             CompleteRevealIfSettled();
         }
 
-        private void RequestZoomOutFraming(RoomBounds2D bounds)
+        private bool TryApplyFixedCenterFraming(RoomBounds2D bounds, UsableViewport viewport)
         {
-            if (!initialized)
+            var position = cinemachineCamera.transform.position;
+            // Brain 반영 전의 output Camera 대신 authoritative 가상 카메라 중심/Lens를 사용한다.
+            var baseline = Mathf.Max(targetOrthographicSize, cinemachineCamera.Lens.OrthographicSize);
+            // 자동 Hint/Reveal은 추가 여백 없이 방 전체가 보이는 최소 크기까지만 넓힌다.
+            if (!viewport.TryComputeFixedCenterFit(bounds, new Point2D(position.x, position.y),
+                outputCamera.aspect, 0f, baseline, out var size))
             {
-                return;
+                return false;
             }
 
-            var cameraPosition = outputCamera.transform.position;
-            var request = new HintFramingRequest(
-                new Point2D(cameraPosition.x, cameraPosition.y),
-                targetOrthographicSize,
-                outputCamera.aspect,
-                bounds,
-                houseFramingMargin);
-
-            var result = HintFramingCalculator.Compute(request);
-            if (!result.Changed)
+            if (!Mathf.Approximately(targetOrthographicSize, size))
             {
-                return;
+                targetOrthographicSize = size;
+                CameraMotionStarted?.Invoke();
             }
-
-            targetOrthographicSize = result.TargetOrthographicSize;
-            CameraMotionStarted?.Invoke();
-
-            // The dynamic max (see RecomputeDynamicMaxOrthographicSize) is derived only from
-            // already-unlocked rooms, so it cannot yet know about newly visible bounds outside the
-            // current house footprint. Framing must never be cut short by that stale ceiling.
             if (targetOrthographicSize > zoomRange.Max)
             {
                 zoomRange = new ZoomRange(zoomRange.Min, targetOrthographicSize);
             }
+            return true;
         }
 
         private void CompleteRevealIfSettled()
         {
-            if (!revealCompletionPending
-                || !Mathf.Approximately(
-                    cinemachineCamera.Lens.OrthographicSize,
-                    targetOrthographicSize))
+            // 입력 수집 뒤의 요청은 Pan 적용 후 최종 가시성으로 완료를 판정한다.
+            if (!revealCompletionPending || initialFramingPending || hintFramingPending
+                || (cameraPan != null && cameraPan.HasQueuedPixelPan)
+                || !TryGetUsableViewport(out var viewport)
+                || !TryApplyFixedCenterFraming(revealBounds, viewport)
+                || !Mathf.Approximately(cinemachineCamera.Lens.OrthographicSize, targetOrthographicSize))
             {
                 return;
             }
@@ -249,5 +386,45 @@ namespace Octoplug.CameraFraming.Unity
             revealCompletionPending = false;
             CameraRevealCompleted?.Invoke();
         }
+
+        private void CancelManualCorrection()
+        {
+            manualCorrectionPending = false;
+            correctionVelocity = Vector2.zero;
+        }
+
+        private bool TryGetUsableViewport(out UsableViewport viewport)
+        {
+            if (cameraPan != null)
+            {
+                return cameraPan.TryGetUsableViewport(out viewport);
+            }
+
+            viewport = default;
+            var pixels = outputCamera.pixelRect;
+            return IsPositiveFinite(pixels.width) && IsPositiveFinite(pixels.height)
+                && IsPositiveFinite(outputCamera.aspect);
+        }
+
+        private void SetLens(float size)
+        {
+            cinemachineCamera.Lens.OrthographicSize = size;
+            if (Time.timeScale == 0f)
+            {
+                outputCamera.orthographicSize = size;
+            }
+        }
+
+        private void SetPosition(Vector3 position)
+        {
+            cinemachineCamera.transform.position = position;
+            if (Time.timeScale == 0f)
+            {
+                outputCamera.transform.position = position;
+            }
+        }
+
+        private static bool IsPositiveFinite(float value) =>
+            value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

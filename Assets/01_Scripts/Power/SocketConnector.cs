@@ -26,7 +26,7 @@ namespace Octoplug.Power
         private Vector2 fallbackInteractionSize = new(0.25f, 0.25f);
 
         [SerializeField]
-        [Tooltip("Wall-mounted terminal Sockets accept drops only from their configured room-facing side.")]
+        [Tooltip("벽에 장착된 경로 종점. 공유 벽에서는 유효한 접근 셀이 있는 양쪽 방에서 연결할 수 있습니다.")]
         private bool terminalEndpoint;
 
         [SerializeField]
@@ -97,6 +97,10 @@ namespace Octoplug.Power
                 + cellSize * Mathf.Max(0f, cellSizeMultiplier);
         }
 
+        /// <summary>
+        /// authored 전면 여부만 판별한다. 실제 공유 벽 획득은
+        /// CableRouteReachability의 Grid 기반 양측 검사를 사용한다.
+        /// </summary>
         public bool IsPointerOnApproachSide(Vector2 worldPos)
         {
             if (!terminalEndpoint)

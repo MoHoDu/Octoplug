@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
+using Octoplug.Audio;
 using Octoplug.Power;
 using Octoplug.Power.Connection;
 using Octoplug.Power.Grid;
@@ -22,10 +24,16 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         private CableRoutingGridService gridService;
         private Transform roomsRoot;
         private string telemetryRoot;
+        private System.IDisposable playbackOverride;
+        private Random.State previousRandomState;
 
         [SetUp]
         public void SetUp()
         {
+            previousRandomState = Random.state;
+            Random.InitState(21);
+            // EditMode에서는 연결 로직을 유지하고 PlayMode 전용 오디오 출력만 격리한다.
+            playbackOverride = GameplaySfxPlayer.OverridePlaybackForVerification(_ => { });
             var roomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RoomPrefabPath);
             Assert.That(roomPrefab, Is.Not.Null);
 
@@ -60,20 +68,29 @@ namespace Octoplug.Tests.Editor.RoomGeneration
         [TearDown]
         public void TearDown()
         {
-            SessionTelemetryService.SetRecorderForVerification(null);
-            for (var i = createdObjects.Count - 1; i >= 0; i--)
+            try
             {
-                if (createdObjects[i] != null)
+                SessionTelemetryService.SetRecorderForVerification(null);
+                for (var i = createdObjects.Count - 1; i >= 0; i--)
                 {
-                    Object.DestroyImmediate(createdObjects[i]);
+                    if (createdObjects[i] != null)
+                    {
+                        Object.DestroyImmediate(createdObjects[i]);
+                    }
+                }
+
+                createdObjects.Clear();
+                if (!string.IsNullOrEmpty(telemetryRoot)
+                    && System.IO.Directory.Exists(telemetryRoot))
+                {
+                    System.IO.Directory.Delete(telemetryRoot, true);
                 }
             }
-
-            createdObjects.Clear();
-            if (!string.IsNullOrEmpty(telemetryRoot)
-                && System.IO.Directory.Exists(telemetryRoot))
+            finally
             {
-                System.IO.Directory.Delete(telemetryRoot, true);
+                playbackOverride?.Dispose();
+                playbackOverride = null;
+                Random.state = previousRandomState;
             }
         }
 
@@ -100,6 +117,11 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             ConfigureProductionContent();
 
             controller.Initialize();
+            // 이 검사는 신규 자기방 소켓의 준비 시점을 검증하므로 공유 대상은 제외한다.
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets().ToArray())
+            {
+                outlet.gameObject.SetActive(false);
+            }
             var promotedRoom = controller.State.NextRoomPlan.Room;
             WallOutlet readyOutlet = null;
             SocketConnector readySocket = null;
@@ -308,18 +330,137 @@ namespace Octoplug.Tests.Editor.RoomGeneration
 
             Assert.That(roomFourProduct, Is.Not.Null);
             Assert.That(roomFourSocket, Is.Not.Null);
-            Assert.That(
-                CableRouteReachability.TryGetLength(
-                    gridService.Grid,
-                    roomFourProduct.Cable.Origin.position,
-                    roomFourSocket,
-                    approachSearchRadius: 3,
-                    out var routedLength,
-                    terminalFrontOnly: true),
-                Is.True);
-            Assert.That(
-                routedLength,
-                Is.LessThanOrEqualTo(roomFourProduct.Cable.CableLength + 0.001f));
+            // Room3+는 공유벽 우선 또는 자기방 전면 fallback 중 하나면 충분하다.
+            var hasSharedRoute = GetSharedSockets(roomFour).Any(socket =>
+                HasReachableRoute(roomFourProduct, socket, roomFour, terminalFrontOnly: false));
+            Assert.That(hasSharedRoute || GetOwnSockets(roomFour.Id).Any(socket =>
+                HasReachableRoute(roomFourProduct, socket, roomFour, terminalFrontOnly: true)), Is.True);
+            AssertValidPlacement(roomFourProduct, roomFour);
+        }
+
+        [Test]
+        public void RoomThreeGeneratedTv_ReachesExistingSharedSocketWithoutMovingOrLengthUpgrade()
+        {
+            ConfigureProductionContent();
+            controller.Initialize();
+            RestrictNextBaseProductToTv();
+            var room = controller.State.NextRoomPlan.Room;
+            Assert.That(room.Bounds.MinY,
+                Is.EqualTo(controller.State.UnlockedLayout.Rooms[0].Bounds.MaxY),
+                "회귀 조건은 초기 방 위쪽에 생성되는 세 번째 방이다.");
+            var existingSockets = GetSharedSockets(room);
+            Assert.That(existingSockets, Is.Not.Empty, "실제 초기 방에 공유벽 소켓이 있어야 한다.");
+            var existingPositions = RuntimeWorldRegistry.GetProducts()
+                .ToDictionary(product => product, product => product.transform.position);
+
+            Assert.That(controller.PromoteCurrentHint(), Is.True);
+
+            var tv = GetOnlyProduct(room.Id);
+            Assert.That(tv.Cable.CableLength, Is.EqualTo(3f));
+            Assert.That(tv.name, Does.StartWith("TV"));
+            AssertValidPlacement(tv, room);
+            foreach (var entry in existingPositions)
+            {
+                Assert.That(entry.Key.transform.position, Is.EqualTo(entry.Value));
+            }
+
+            var socket = existingSockets.FirstOrDefault(candidate =>
+                HasReachableRoute(tv, candidate, room, terminalFrontOnly: false));
+            Assert.That(socket, Is.Not.Null,
+                "생성된 TV 자체가 길이 3으로 기존 공유벽에 닿아야 한다; 테스트에서 위치를 보정하지 않는다.");
+            var generatedPosition = tv.transform.position;
+            var generatedOrigin = tv.Cable.Origin.position;
+            var pointer = (Vector2)socket.ConnectorTransform.position
+                - socket.ApproachDirection * gridService.Grid.CellSize;
+            var routing = tv.Cable.GetComponent<Octoplug.Power.Cable.CableRoutingController>();
+            Assert.That(routing.TryResolveSocketCandidate(pointer, out var candidate, out var path), Is.True);
+            Assert.That(existingSockets, Does.Contain(candidate));
+            Assert.That(GridPathfinder.PathLength(path), Is.LessThanOrEqualTo(3.001f));
+            AssertPointInsideRoom(path[^2], room);
+            Assert.That(routing.TryCommitSocketDrop(pointer), Is.True);
+            Assert.That(tv.Cable.Plug.ConnectedSocket, Is.SameAs(candidate));
+            Assert.That(candidate.ConnectedPlug, Is.SameAs(tv.Cable.Plug));
+            Assert.That(tv.IsPowered, Is.True);
+
+            PlugSocketConnection.Disconnect(tv.Cable.Plug);
+            tv.SetPowered(false);
+            Assert.That(routing.TryCommitSocketDrop(pointer), Is.True);
+            Assert.That(tv.Cable.Plug.ConnectedSocket, Is.SameAs(candidate));
+            Assert.That(tv.IsPowered, Is.True);
+            Assert.That(tv.transform.position, Is.EqualTo(generatedPosition));
+            Assert.That(tv.Cable.Origin.position, Is.EqualTo(generatedOrigin));
+            Assert.That(tv.Cable.CableLength, Is.EqualTo(3f));
+        }
+
+        [TestCase("missing")]
+        [TestCase("occupied")]
+        [TestCase("inactive")]
+        [TestCase("opposite-wall")]
+        [TestCase("no-placement")]
+        public void RoomThreeWithoutUsableSharedSocket_FallsBackToOwnFront(string unavailableReason)
+        {
+            ConfigureProductionContent();
+            controller.Initialize();
+            RestrictNextBaseProductToTv();
+            var room = controller.State.NextRoomPlan.Room;
+            var sharedSockets = GetSharedSockets(room);
+            Assert.That(sharedSockets, Is.Not.Empty);
+            if (unavailableReason == "no-placement")
+            {
+                // 공유 소켓은 남겨두되 길이 3 안쪽의 제품 배치 공간만 예약으로 막는다.
+                var grid = gridService.Grid;
+                var min = grid.WorldToCell(new Vector2(room.Bounds.MinX, room.Bounds.MinY));
+                var max = grid.WorldToCell(new Vector2(room.Bounds.MaxX, room.Bounds.MinY + 3.25f));
+                var reservationOwner = new object();
+                for (var x = min.X; x <= max.X; x++)
+                {
+                    for (var y = min.Y; y <= max.Y; y++)
+                    {
+                        grid.SetObjectOccupied(new GridCoord(x, y), reservationOwner, true);
+                    }
+                }
+            }
+            foreach (var outlet in sharedSockets.Select(socket => socket.GetComponentInParent<WallOutlet>()).Distinct())
+            {
+                if (unavailableReason == "no-placement") continue;
+                if (unavailableReason == "missing")
+                {
+                    Object.DestroyImmediate(outlet.gameObject);
+                }
+                else if (unavailableReason == "inactive")
+                {
+                    outlet.gameObject.SetActive(false);
+                }
+                else if (unavailableReason == "opposite-wall")
+                {
+                    Assert.That(RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner), Is.True);
+                    var ownerRoom = controller.State.UnlockedLayout.Rooms.First(value => value.Id == owner);
+                    var direction = outlet.Sockets[0].ApproachDirection;
+                    var width = ownerRoom.Bounds.MaxX - ownerRoom.Bounds.MinX;
+                    var height = ownerRoom.Bounds.MaxY - ownerRoom.Bounds.MinY;
+                    outlet.transform.position += (Vector3)(direction
+                        * (Mathf.Abs(direction.x) > 0.5f ? width : height));
+                }
+                else
+                {
+                    foreach (var socket in outlet.ActiveSockets)
+                    {
+                        // 점유 입력만 구성한다. 성공 증거는 아래의 실제 생성/라우팅 경로다.
+                        var blocker = new GameObject("Occupied shared socket");
+                        createdObjects.Add(blocker);
+                        socket.AssignPlug(blocker.AddComponent<PlugConnector>());
+                    }
+                }
+            }
+
+            Assert.That(GetSharedSockets(room).Count > 0,
+                Is.EqualTo(unavailableReason == "no-placement"));
+            Assert.That(controller.PromoteCurrentHint(), Is.True);
+            var tv = GetOnlyProduct(room.Id);
+            Assert.That(tv.Cable.CableLength, Is.EqualTo(3f));
+            Assert.That(GetOwnSockets(room.Id).Any(socket =>
+                HasReachableRoute(tv, socket, room, terminalFrontOnly: true)), Is.True);
+            AssertValidPlacement(tv, room);
         }
 
         [Test]
@@ -445,6 +586,125 @@ namespace Octoplug.Tests.Editor.RoomGeneration
             {
                 Assert.That(CountProducts(room.Id), Is.EqualTo(1));
                 Assert.That(CountWallOutlets(room.Id), Is.EqualTo(1));
+                var product = GetOnlyProduct(room.Id);
+                Assert.That(GetOwnSockets(room.Id).Any(socket =>
+                    HasReachableRoute(product, socket, room, terminalFrontOnly: true)), Is.True);
+                AssertValidPlacement(product, room);
+            }
+        }
+
+        private void RestrictNextBaseProductToTv()
+        {
+            // 초기 구성은 실제 TV/Fan 그대로 생성한 뒤 다음 pool 선택만 TV로 제한한다.
+            // 원본 prefab, 밸런스, 생성된 제품의 위치/길이는 변경하지 않는다.
+            var content = new SerializedObject(controller.GetComponent<RoomContentGenerationController>());
+            foreach (var field in new[] { "fanPrefab", "heaterPrefab", "inductionPrefab", "airConditionerPrefab" })
+            {
+                content.FindProperty(field).objectReferenceValue = null;
+            }
+            content.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static ApplianceSource GetOnlyProduct(RoomId roomId)
+        {
+            var products = RuntimeWorldRegistry.GetProducts().Where(product =>
+                RuntimeWorldRegistry.TryGetRoomOwner(product, out var owner) && owner == roomId).ToArray();
+            Assert.That(products, Has.Length.EqualTo(1));
+            return products[0];
+        }
+
+        private static List<SocketConnector> GetOwnSockets(RoomId roomId)
+        {
+            return RuntimeWorldRegistry.GetWallOutlets().Where(outlet =>
+                RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner) && owner == roomId)
+                .SelectMany(outlet => outlet.ActiveSockets)
+                .Where(socket => socket.isActiveAndEnabled && !socket.IsConnected).ToList();
+        }
+
+        private List<SocketConnector> GetSharedSockets(RoomPlacement room)
+        {
+            var sockets = new List<SocketConnector>();
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (!RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner) || owner == room.Id)
+                {
+                    continue;
+                }
+
+                foreach (var adjacent in controller.State.UnlockedLayout.Rooms)
+                {
+                    if (adjacent.Id != owner || !RoomGeometry.TryGetSharedWall(room, adjacent, out var shared))
+                    {
+                        continue;
+                    }
+
+                    foreach (var socket in outlet.ActiveSockets)
+                    {
+                        var position = (Vector2)socket.ConnectorTransform.position;
+                        var horizontal = shared.Span.Orientation == WallOrientation.Horizontal;
+                        var along = horizontal ? position.x : position.y;
+                        var offset = (horizontal ? position.y : position.x) - shared.Span.FixedCoordinate;
+                        var center = new Vector2(room.Bounds.Center.X, room.Bounds.Center.Y);
+                        if (socket.isActiveAndEnabled && !socket.IsConnected
+                            && along >= shared.Span.Start && along <= shared.Span.End
+                            && Mathf.Abs(offset) <= gridService.Grid.CellSize * 0.5f
+                            && Vector2.Dot(center - position, socket.ApproachDirection) < 0f)
+                        {
+                            sockets.Add(socket);
+                        }
+                    }
+                }
+            }
+            return sockets;
+        }
+
+        private bool HasReachableRoute(ApplianceSource product, SocketConnector socket,
+            RoomPlacement room, bool terminalFrontOnly)
+        {
+            if (!CableRouteReachability.TryBuildPath(gridService.Grid, product.Cable.Origin.position,
+                    socket, 3, 0.15f, out var path, terminalFrontOnly)
+                || path.Count < 2 || GridPathfinder.PathLength(path) > product.Cable.CableLength + 0.001f)
+            {
+                return false;
+            }
+
+            var approach = path[^2];
+            return approach.x > room.Bounds.MinX && approach.x < room.Bounds.MaxX
+                && approach.y > room.Bounds.MinY && approach.y < room.Bounds.MaxY;
+        }
+
+        private static void AssertPointInsideRoom(Vector2 point, RoomPlacement room)
+        {
+            Assert.That(point.x, Is.GreaterThan(room.Bounds.MinX).And.LessThan(room.Bounds.MaxX));
+            Assert.That(point.y, Is.GreaterThan(room.Bounds.MinY).And.LessThan(room.Bounds.MaxY));
+        }
+
+        private void AssertValidPlacement(ApplianceSource product, RoomPlacement room)
+        {
+            Physics2D.SyncTransforms();
+            var footprint = product.GetComponent<PlacementFootprint>();
+            Assert.That(footprint, Is.Not.Null);
+            var bounds = footprint.WorldBounds;
+            Assert.That(bounds.min.x, Is.GreaterThanOrEqualTo(room.Bounds.MinX));
+            Assert.That(bounds.max.x, Is.LessThanOrEqualTo(room.Bounds.MaxX));
+            Assert.That(bounds.min.y, Is.GreaterThanOrEqualTo(room.Bounds.MinY));
+            Assert.That(bounds.max.y, Is.LessThanOrEqualTo(room.Bounds.MaxY));
+            var cells = new List<GridCoord>();
+            footprint.GetCoveredCells(gridService.Grid, product.transform.position, cells);
+            Assert.That(cells, Is.Not.Empty);
+            foreach (var cell in cells)
+            {
+                Assert.That(gridService.Grid.IsWalkable(cell), Is.True);
+                Assert.That(gridService.Grid.IsObjectOccupied(cell), Is.True);
+                Assert.That(gridService.Grid.IsObjectOccupiedByOther(cell, footprint), Is.False);
+            }
+            foreach (var other in RuntimeWorldRegistry.GetProducts())
+            {
+                if (other == product) continue;
+                var otherBounds = other.GetComponent<PlacementFootprint>().WorldBounds;
+                var overlapX = Mathf.Min(bounds.max.x, otherBounds.max.x) - Mathf.Max(bounds.min.x, otherBounds.min.x);
+                var overlapY = Mathf.Min(bounds.max.y, otherBounds.max.y) - Mathf.Max(bounds.min.y, otherBounds.min.y);
+                Assert.That(overlapX > 0.0001f && overlapY > 0.0001f, Is.False);
             }
         }
 

@@ -234,7 +234,7 @@ namespace Octoplug.Tests.Editor
             var socket = outlet.Sockets[0];
             var product = CreateProduct("TV", Vector2.zero);
             PlaceProductNearSocket(product, socket);
-            MarkWalkableForCableAndApproach(product, socket);
+            MarkWalkableForCableAndApproach(product, socket, exteriorWall: true);
             var controller = GetRoutingController(product);
             var socketPosition =
                 (Vector2)socket.ConnectorTransform.position;
@@ -376,7 +376,8 @@ namespace Octoplug.Tests.Editor
 
         private void MarkWalkableForCableAndApproach(
             ApplianceSource product,
-            SocketConnector socket)
+            SocketConnector socket,
+            bool exteriorWall = false)
         {
             var originCell = Grid.WorldToCell(
                 product.Cable.Origin.position);
@@ -396,6 +397,26 @@ namespace Octoplug.Tests.Editor
 
             MarkWalkableRectangle(minX, maxX, minY, maxY);
             MarkCell(socketCell, GridCellState.Blocked);
+            if (!exteriorWall)
+            {
+                return;
+            }
+
+            // 후면 거절은 공유 벽이 아니라 바깥쪽 바닥이 없는 외벽의 계약이다.
+            for (var x = minX; x <= maxX; x++)
+            {
+                for (var y = minY; y <= maxY; y++)
+                {
+                    var side = (x - socketCell.X) * approachStep.X
+                        + (y - socketCell.Y) * approachStep.Y;
+                    if (side <= 0)
+                    {
+                        MarkCell(
+                            new GridCoord(x, y),
+                            side == 0 ? GridCellState.Blocked : GridCellState.Unknown);
+                    }
+                }
+            }
         }
 
         private static int[] GetInstanceIds(IReadOnlyList<SocketConnector> sockets)

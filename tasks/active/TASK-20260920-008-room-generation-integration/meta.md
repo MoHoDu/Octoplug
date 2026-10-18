@@ -34,6 +34,11 @@
 
 Production Room prefab adaptation, controller/wiring, `RoomPlan → CableRoutingGrid`, dynamic Doors, unified Wall Outlet placement, grid rebuild, pointer-to-Pan scene integration, Cinemachine scene setup, framing bridge, Hint visuals, debug trigger, and `InfiniteMode` Human Verification remain for a later phase.
 
+## Exclusive Assets — TASK023 한정 이관
+
+- 2026-10-19 후속 승인: CameraFraming의 PanBoundaryCalculator/신규 UsableViewport와 CameraFraming.Unity의 HouseCameraPanController/HouseCameraZoomController/CameraPanInputReader/RoomGenerationCameraFramingBridge 및 관련 순수/Editor 테스트를 TASK-20261018-023의 초기fit·상하단UI·manual zoom 연속보정에 한정 순차 이관한다. 다른 Camera/통합 범위·기존 상태는 유지하며 동시 수정하지 않는다.
+- 승인 계획: `C:/Users/imvag/.claude/plans/magical-dazzling-kurzweil.md`. TASK023 workspace `D:/github-worktrees/Octoplug/shared-wall-outlet`; 이번 갱신은 소유권 기록만이며 코드/Scene 수정 또는 TASK008 완료 선언이 아니다.
+
 ## Human Decisions / Open Decisions
 
 - Confirmed: committed remote branch only; existing grid is authoritative; Game Flow requests unlocks while Room Generation only creates/promotes on request.

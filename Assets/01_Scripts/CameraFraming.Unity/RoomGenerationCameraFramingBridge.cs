@@ -91,7 +91,12 @@ namespace Octoplug.CameraFraming.Unity
                 AppendBounds(unlockedBounds, hint.Bounds));
             cameraPan.UpdateHouseBounds(visibleHouseBounds);
 
-            cameraZoom.RequestHintFraming(hint.Bounds);
+            // 시작 생성 중 연속 Hint는 최신 전체 visible bounds로 병합한다.
+            // 최초 pre-Brain tick에서 fit한 뒤부터는 위치를 보존하는 기존 Hint 경로를 쓴다.
+            if (!cameraZoom.QueueInitialFraming(visibleHouseBounds))
+            {
+                cameraZoom.RequestHintFraming(hint.Bounds);
+            }
         }
 
         private void OnCameraRevealCompleted()

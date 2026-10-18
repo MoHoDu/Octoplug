@@ -157,8 +157,8 @@ namespace Octoplug.Power.Cable
         /// <summary>
         /// Resolves the magnetic Socket candidate and route for the current
         /// Cable without moving the Plug or mutating the connection graph.
-        /// This is the same side, activity, occupancy, route, length, graph,
-        /// and power query used by drag preview and release.
+        /// 접근측·활성·점유·경로·길이·연결 구조는 preview와 release가 공유한다.
+        /// 전력 예산은 미리보기를 막지 않고 release에서만 검사한다.
         /// </summary>
         public bool TryResolveSocketCandidate(
             Vector2 pointerWorldPosition,
@@ -204,7 +204,8 @@ namespace Octoplug.Power.Cable
                     originPosition,
                     originCell,
                     pointerWorldPosition,
-                    grid);
+                    grid,
+                    out _);
         }
 
         private bool TryResolveRoutingContext(
@@ -912,7 +913,10 @@ namespace Octoplug.Power.Cable
                 originalSocket = null;
             }
 
-            if (TryConnectToNearbySocket(originPos, originCell, lastPointerWorldPos, grid))
+            if (TryConnectToNearbySocket(
+                    originPos, originCell, lastPointerWorldPos, grid,
+                    out var rejectionPositionApplied)
+                || rejectionPositionApplied)
             {
                 return;
             }
@@ -961,13 +965,15 @@ namespace Octoplug.Power.Cable
         /// drag's own former Socket) within the more forgiving
         /// <see cref="socketDetachRadius"/>, so drifting a little past the
         /// detach threshold and coming straight back still reconnects.
-        /// Returns false (no state or position change) whenever no Socket
-        /// is in range, the nearest one is already occupied, or no route
-        /// to it exists within the Cable's length — callers then fall back
-        /// to the existing plain-drop handling.
+        /// 연결 성공 여부를 반환한다. 유효 후보가 없으면 일반 drop 처리로
+        /// 이어지며, 최종 검증 거절로 실제 밀어내기를 적용한 경우에는
+        /// rejectionPositionApplied로 알려 해당 위치와 경로를 보존한다.
         /// </summary>
-        private bool TryConnectToNearbySocket(Vector2 originPos, GridCoord originCell, Vector2 pointerPosition, CableRoutingGrid grid)
+        private bool TryConnectToNearbySocket(
+            Vector2 originPos, GridCoord originCell, Vector2 pointerPosition,
+            CableRoutingGrid grid, out bool rejectionPositionApplied)
         {
+            rejectionPositionApplied = false;
             if (!grid.IsWalkable(originCell))
             {
                 return false;
@@ -991,9 +997,11 @@ namespace Octoplug.Power.Cable
                     $"Reject reason: {(rejectedSocket != null ? rejectedReason.ToString() : "No active, free, room-side, routable socket in acquisition range")}",
                     this);
                 if (recentlyDetachedSocket == null
+                    || !recentlyDetachedSocket.isActiveAndEnabled
                     || recentlyDetachedSocket.IsConnected
-                    || !recentlyDetachedSocket.IsPointerOnApproachSide(
-                        pointerPosition)
+                    || !CableRouteReachability.IsPointerOnApproachSide(
+                        grid, recentlyDetachedSocket, pointerPosition,
+                        socketApproachSearchRadius)
                     || Vector2.Distance(
                         pointerPosition,
                         recentlyDetachedSocket.ConnectorTransform.position)
@@ -1009,17 +1017,11 @@ namespace Octoplug.Power.Cable
                         grid,
                         out worldPath)
                     || GridPathfinder.PathLength(worldPath)
-                        > cableInfo.CableLength + 0.001f
-                    || !PowerValidationService.TryValidate(
-                        applianceSource,
-                        powerStrip,
-                        recentlyDetachedSocket,
-                        houseBudget,
-                        out _))
+                        > cableInfo.CableLength + 0.001f)
                 {
                     if (rejectedSocket != null)
                     {
-                        RejectConnection(
+                        rejectionPositionApplied = RejectConnection(
                             rejectedReason,
                             rejectedSocket,
                             originPos,
@@ -1036,7 +1038,7 @@ namespace Octoplug.Power.Cable
             LastFailureReason = ConnectionFailureReason.None;
             if (!PowerValidationService.TryValidateGraphConnection(powerStrip, socket, out var graphFailure))
             {
-                RejectConnection(graphFailure, socket, originPos, originCell, grid);
+                rejectionPositionApplied = RejectConnection(graphFailure, socket, originPos, originCell, grid);
                 return false;
             }
 
@@ -1045,7 +1047,7 @@ namespace Octoplug.Power.Cable
             // and immediately disconnect.
             if (!PowerValidationService.TryValidate(applianceSource, powerStrip, socket, houseBudget, out var failureReason))
             {
-                RejectConnection(failureReason, socket, originPos, originCell, grid);
+                rejectionPositionApplied = RejectConnection(failureReason, socket, originPos, originCell, grid);
                 return false;
             }
 
@@ -1060,7 +1062,7 @@ namespace Octoplug.Power.Cable
             return true;
         }
 
-        private void RejectConnection(
+        private bool RejectConnection(
             ConnectionFailureReason reason,
             Octoplug.Power.SocketConnector socket,
             Vector2 originPos,
@@ -1071,45 +1073,40 @@ namespace Octoplug.Power.Cable
             Debug.LogWarning($"{name}: connection to {socket.name} rejected — {reason}.", this);
             ConnectionRejected?.Invoke(reason);
             AnyConnectionRejected?.Invoke(reason);
-            ApplyPowerRejectFallbackPosition(socket, originPos, originCell, grid);
+            return ApplyPowerRejectFallbackPosition(socket, originPos, originCell, grid);
         }
 
         /// <summary>
-        /// After a connection is rejected by Power Validation specifically,
-        /// pushes the Plug to the nearest walkable/reachable cell that is
-        /// still at least <see cref="powerRejectFallbackDistance"/> from the
-        /// Socket, so it does not end up visually sitting on top of the
-        /// Outlet it was just refused. Sets <see cref="lastValidPlugPosition"/>
-        /// and moves the Plug's transform directly (before <c>ResolveDragEnd</c>
-        /// re-reads its current position) so no separate "was this drop
-        /// rejected for power reasons" flag needs to be threaded through.
-        /// A no-op (falls through to the normal drop-fallback chain) if no
-        /// such cell exists within <see cref="nearestValidSearchRadius"/>.
+        /// 거절된 Socket에서 <see cref="powerRejectFallbackDistance"/> 이상 떨어진
+        /// 도달 가능한 셀로 Plug를 밀어낸다. 위치·경로·마지막 유효 위치를 실제로
+        /// 적용했을 때만 true를 반환하여 일반 drop fallback의 덮어쓰기를 막는다.
+        /// 길이 내 유효 위치가 없으면 false를 반환하고 일반 fallback을 계속한다.
         /// </summary>
-        private void ApplyPowerRejectFallbackPosition(Octoplug.Power.SocketConnector socket, Vector2 originPos, GridCoord originCell, CableRoutingGrid grid)
+        private bool ApplyPowerRejectFallbackPosition(Octoplug.Power.SocketConnector socket, Vector2 originPos, GridCoord originCell, CableRoutingGrid grid)
         {
             var socketPos = (Vector2)socket.ConnectorTransform.position;
             if (!TryFindPowerRejectFallbackCell(socketPos, originCell, grid, out var fallbackCell))
             {
-                return;
+                return false;
             }
 
             if (!GridPathfinder.TryFindPath(grid, originCell, fallbackCell, out var fallbackPath))
             {
-                return;
+                return false;
             }
 
             var fallbackPos = grid.CellToWorld(fallbackCell);
             var worldPath = BuildWorldPath(originPos, fallbackPath, fallbackPos, grid);
             if (GridPathfinder.PathLength(worldPath) > cableInfo.CableLength + 0.001f)
             {
-                return;
+                return false;
             }
 
             var plugTransform = cableInfo.Plug.transform;
             plugTransform.position = new Vector3(fallbackPos.x, fallbackPos.y, plugTransform.position.z);
             pathRenderer?.Render(worldPath);
             lastValidPlugPosition = fallbackPos;
+            return true;
         }
 
         private static readonly GridCoord[] CardinalDirections =
@@ -1213,12 +1210,10 @@ namespace Octoplug.Power.Cable
         }
 
         /// <summary>
-        /// Finds the nearest enabled, free Socket that is fully valid for the
-        /// proposed connection. Every in-range candidate is considered, so a
-        /// graph- or power-invalid nearer Socket cannot hide a farther valid
-        /// Socket. If none is valid, the nearest typed graph/power rejection is
-        /// returned separately for the Alert path; silent route/side/length
-        /// failures are excluded.
+        /// 활성·빈 Socket 중 접근측·경로·길이·연결 구조가 유효한 가장 가까운
+        /// 미리보기 후보를 찾는다. 전력 부족은 후보를 제외하지 않으며 실제
+        /// release에서 판정한다. 구조상 유효한 후보가 없으면 가장 가까운
+        /// 구조 거절 사유를 Alert 경로에 전달한다. 경로·접근측·길이 실패는 제외한다.
         /// </summary>
         private bool TryFindNearestSocket(
             Vector2 originPos,
@@ -1246,8 +1241,7 @@ namespace Octoplug.Power.Cable
             {
                 if (!candidate.isActiveAndEnabled
                     || !candidate.IsActiveSocket
-                    || candidate.IsConnected
-                    || !candidate.IsPointerOnApproachSide(fromPosition))
+                    || candidate.IsConnected)
                 {
                     continue;
                 }
@@ -1267,6 +1261,8 @@ namespace Octoplug.Power.Cable
                         grid.CellSize,
                         socketCellPaddingMultiplier));
                 if (sqrDistance > radius * radius
+                    || !CableRouteReachability.IsPointerOnApproachSide(
+                        grid, candidate, fromPosition, socketApproachSearchRadius)
                     || !TryRouteToSocket(
                         originPos,
                         originCell,
@@ -1283,16 +1279,6 @@ namespace Octoplug.Power.Cable
                     powerStrip,
                     candidate,
                     out var candidateFailure);
-                if (valid)
-                {
-                    valid = PowerValidationService.TryValidate(
-                        applianceSource,
-                        powerStrip,
-                        candidate,
-                        houseBudget,
-                        out candidateFailure);
-                }
-
                 if (!valid)
                 {
                     if (sqrDistance < closestRejectedSqrDistance

@@ -2565,6 +2565,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Octoplug.CameraFraming.Unity.HouseCameraZoomController
   cinemachineCamera: {fileID: 789903524}
   outputCamera: {fileID: 781878287}
+  cameraPan: {fileID: 1857670112}
   zoomInput: {fileID: 1151239699}
   minOrthographicSize: 5
   houseFramingMargin: 2
@@ -2584,6 +2585,8 @@ MonoBehaviour:
   cinemachineCamera: {fileID: 789903524}
   outputCamera: {fileID: 781878287}
   panInput: {fileID: 1874010591}
+  topHudArea: {fileID: 950688150}
+  bottomResidentsArea: {fileID: 1478374348}
   panBoundaryMargin: 2
 --- !u!114 &1857670113
 MonoBehaviour:
