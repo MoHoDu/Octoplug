@@ -28,7 +28,7 @@
 - `Assets/00_Scenes/Demo/InfiniteMode.unity` (conditional)
 - `Assets/01_Scripts/Telemetry/`, `Assets/Tests/Editor/Telemetry/`
 - `Assets/01_Scripts/Power/Cable/CablePathRenderer.cs`, `PowerStripHeadController.cs`
-- `Assets/01_Scripts/Power/Routing/CableRouteReachability.cs`
+- `Assets/01_Scripts/Power/Routing/CableRouteReachability.cs`: TASK-20261018-021로 이번 공유 벽 양방향 라우팅 수정에 한정 이관; Telemetry 및 기타 소유 범위 유지.
 - `Assets/01_Scripts/Power/Connection/PlugSocketConnection.cs`
 - `Assets/01_Scripts/Power/RuntimeWorldRegistry.cs`
 - `Assets/01_Scripts/ResidentDemand.Unity/ResidentDemandController.cs`
@@ -36,8 +36,8 @@
 - `Assets/01_Scripts/GameFlow.Unity/GameFlowManager.cs`
 - Focused Editor tests for telemetry, SessionProgress, and GameFlow
 - `Assets/01_Scripts/Reward.Unity/RewardSystemController.cs`
-- `Assets/01_Scripts/RoomGeneration.Unity/ProductionRoomGenerationController.cs`, `RoomContentGenerationController.cs`
-- `Assets/Tests/Editor/RoomGeneration/ProductionRoomGenerationControllerTests.cs`
+- `Assets/01_Scripts/RoomGeneration.Unity/ProductionRoomGenerationController.cs`; `RoomContentGenerationController.cs`는 TASK-20261018-021 공유벽 도달 생성 위치 보정에 한정 이관.
+- `Assets/Tests/Editor/RoomGeneration/ProductionRoomGenerationControllerTests.cs`: TASK-20261018-021 생성 위치 보정 회귀 검증에 한정 이관.
 
 ## Human Decisions
 - 2026-09-22: schema/ID/privacy constraints confirmed. Local JSON only.

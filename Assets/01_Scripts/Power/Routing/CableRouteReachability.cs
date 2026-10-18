@@ -55,29 +55,31 @@ namespace Octoplug.Power.Routing
             }
 
             var originCell = grid.WorldToCell(originPosition);
-            if (!grid.IsWalkable(originCell)
-                || !TryGetSocketApproachCell(
-                    grid,
-                    socket,
-                    approachSearchRadius,
-                    terminalFrontOnly,
-                    out var approachCell)
-                || !GridPathfinder.TryFindPath(
-                    grid,
-                    originCell,
-                    approachCell,
-                    out var cellPath))
+            if (!grid.IsWalkable(originCell))
             {
                 return false;
             }
 
-            worldPath = BuildWorldPath(
-                grid,
-                originPosition,
-                cellPath,
-                socket.ConnectorTransform.position,
-                minRenderSegmentLength);
-            return true;
+            TryBuildApproachPath(
+                grid, originPosition, originCell, socket,
+                approachSearchRadius, minRenderSegmentLength,
+                socket.IsTerminalEndpoint ? 1 : 0, out worldPath);
+
+            // 공유 벽에서는 소켓에 가까운 쪽이 아니라 제품에서 짧게
+            // 도달할 수 있는 쪽을 선택한다. 생성 검증의 전면 제한은 유지한다.
+            if (socket.IsTerminalEndpoint && !terminalFrontOnly
+                && TryBuildApproachPath(
+                    grid, originPosition, originCell, socket,
+                    approachSearchRadius, minRenderSegmentLength,
+                    -1, out var backPath)
+                && (worldPath == null
+                    || GridPathfinder.PathLength(backPath)
+                        < GridPathfinder.PathLength(worldPath)))
+            {
+                worldPath = backPath;
+            }
+
+            return worldPath != null;
         }
 
         public static bool IsWithinLength(
@@ -98,22 +100,71 @@ namespace Octoplug.Power.Routing
                 && routedLength <= cableLength + 0.001f;
         }
 
+        public static bool IsPointerOnApproachSide(
+            CableRoutingGrid grid,
+            SocketConnector socket,
+            Vector2 pointerPosition,
+            int approachSearchRadius)
+        {
+            if (grid == null || socket == null || approachSearchRadius < 0)
+            {
+                return false;
+            }
+
+            if (!socket.IsTerminalEndpoint)
+            {
+                return true;
+            }
+
+            var dot = Vector2.Dot(
+                pointerPosition - (Vector2)socket.ConnectorTransform.position,
+                socket.ApproachDirection);
+            return (dot >= -0.001f && TryGetSocketApproachCell(
+                       grid, socket, approachSearchRadius, 1, out _))
+                || (dot <= 0.001f && TryGetSocketApproachCell(
+                       grid, socket, approachSearchRadius, -1, out _));
+        }
+
+        private static bool TryBuildApproachPath(
+            CableRoutingGrid grid,
+            Vector2 originPosition,
+            GridCoord originCell,
+            SocketConnector socket,
+            int searchRadius,
+            float minRenderSegmentLength,
+            int approachSide,
+            out List<Vector2> worldPath)
+        {
+            worldPath = null;
+            if (!TryGetSocketApproachCell(
+                    grid, socket, searchRadius, approachSide, out var approachCell)
+                || !GridPathfinder.TryFindPath(
+                    grid, originCell, approachCell, out var cellPath))
+            {
+                return false;
+            }
+
+            worldPath = BuildWorldPath(
+                grid, originPosition, cellPath,
+                socket.ConnectorTransform.position, minRenderSegmentLength);
+            return true;
+        }
+
         private static bool TryGetSocketApproachCell(
             CableRoutingGrid grid,
             SocketConnector socket,
             int searchRadius,
-            bool terminalFrontOnly,
+            int approachSide,
             out GridCoord approachCell)
         {
             var socketPosition = (Vector2)socket.ConnectorTransform.position;
             var socketCell = grid.WorldToCell(socketPosition);
             approachCell = socketCell;
             if (grid.IsWalkable(socketCell)
-                && (!terminalFrontOnly
-                    || !socket.IsTerminalEndpoint
+                && (approachSide == 0
                     || Vector2.Dot(
                         grid.CellToWorld(socketCell) - socketPosition,
-                        socket.ApproachDirection) > 0.001f))
+                        socket.ApproachDirection) * approachSide > 0.001f))
             {
                 return true;
             }
@@ -131,20 +182,12 @@ namespace Octoplug.Power.Routing
                     }
 
                     var candidatePosition = grid.CellToWorld(candidate);
-                    if (socket.IsTerminalEndpoint)
+                    if (approachSide != 0
+                        && Vector2.Dot(
+                            candidatePosition - socketPosition,
+                            socket.ApproachDirection) * approachSide <= 0.001f)
                     {
-                        var dot = Vector2.Dot(candidatePosition - socketPosition, socket.ApproachDirection);
-                        // Normal gameplay keeps supporting either side of a
-                        // shared wall. Generated Room content can opt into the
-                        // terminal's authored room-facing side so a sub-cell
-                        // Socket offset cannot select the adjacent Room and
-                        // inflate the required Cable route through a Door.
-                        if (terminalFrontOnly
-                            ? dot <= 0.001f
-                            : Mathf.Abs(dot) < 0.001f)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
 
                     var sqrDistance = (candidatePosition - socketPosition).sqrMagnitude;

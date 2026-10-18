@@ -199,7 +199,8 @@ namespace Octoplug.RoomGeneration.Unity
             RoomPlacement room,
             CableRoutingGrid grid,
             ICollection<GameObject> generatedObjects,
-            out string failure)
+            out string failure,
+            bool preferSharedWallOutlet = false)
         {
             var productParent = GameObject.Find("Products")?.transform;
             var instance = RuntimeEquipmentFactory.Stage(
@@ -217,40 +218,51 @@ namespace Octoplug.RoomGeneration.Unity
             var reachabilityFailed = false;
             var reachabilityDiagnostics = new ProductReachabilityDiagnostics();
 
-            bool found = RoomObjectPlacementPlanner.TryFindPosition(
-                room,
-                grid,
-                footprint,
-                socketCount: 0,
-                (candidate, bounds) =>
+            var sharedSockets = preferSharedWallOutlet
+                ? GetSharedWallSockets(room, grid)
+                : null;
+            bool searchingSharedWall = sharedSockets != null && sharedSockets.Count > 0;
+
+            bool AcceptCandidate(Vector2 candidate, Bounds bounds)
+            {
+                reachabilityDiagnostics.RecordCandidate();
+                instance.transform.position = candidate;
+                Physics2D.SyncTransforms();
+                if (OverlapsPlacementObject(footprint, bounds))
                 {
-                    reachabilityDiagnostics.RecordCandidate();
-                    instance.transform.position = candidate;
-                    Physics2D.SyncTransforms();
-                    if (OverlapsPlacementObject(footprint, bounds))
-                    {
-                        reachabilityDiagnostics.RecordOverlap();
-                        candidateFailure =
-                            "all otherwise valid positions overlap a Product or PowerStrip";
-                        return false;
-                    }
+                    reachabilityDiagnostics.RecordOverlap();
+                    candidateFailure =
+                        "all otherwise valid positions overlap a Product or PowerStrip";
+                    return false;
+                }
 
-                    if (!CanReachWallOutlet(
-                            product,
-                            room,
-                            grid,
-                            reachabilityDiagnostics))
-                    {
-                        reachabilityFailed = true;
-                        candidateFailure =
-                            "no usable room Wall Outlet socket is reachable within the Product's initial CableLength";
-                        return false;
-                    }
+                bool reachable = searchingSharedWall
+                    ? CanReachSharedWallOutlet(product, room, grid, sharedSockets)
+                    : CanReachWallOutlet(product, room, grid, reachabilityDiagnostics);
+                if (!reachable)
+                {
+                    reachabilityFailed = true;
+                    candidateFailure =
+                        "no usable room Wall Outlet socket is reachable within the Product's initial CableLength";
+                    return false;
+                }
 
-                    return true;
-                },
-                out var spawnPosition,
-                out failure);
+                return true;
+            }
+
+            bool found = RoomObjectPlacementPlanner.TryFindPosition(
+                room, grid, footprint, socketCount: 0, AcceptCandidate,
+                out var spawnPosition, out failure);
+            if (!found && searchingSharedWall)
+            {
+                // 공유 벽에 닿는 유효 위치가 없으면 기존 자기방 배치를 유지한다.
+                searchingSharedWall = false;
+                reachabilityFailed = false;
+                reachabilityDiagnostics = new ProductReachabilityDiagnostics();
+                found = RoomObjectPlacementPlanner.TryFindPosition(
+                    room, grid, footprint, socketCount: 0, AcceptCandidate,
+                    out spawnPosition, out failure);
+            }
 
             if (!found)
             {
@@ -519,7 +531,8 @@ namespace Octoplug.RoomGeneration.Unity
                         room,
                         grid,
                         generatedObjects,
-                        out failure))
+                        out failure,
+                        preferSharedWallOutlet: true))
                 {
                     return true;
                 }
@@ -557,6 +570,112 @@ namespace Octoplug.RoomGeneration.Unity
             generatedWallOutletWalls = string.Join(", ", placedWalls);
             if (placedWalls.Count < count) wallOutletPlacementWarning = "no remaining valid wall";
             return placedWalls.Count;
+        }
+
+        private List<SocketConnector> GetSharedWallSockets(
+            RoomPlacement room,
+            CableRoutingGrid grid)
+        {
+            var sockets = new List<SocketConnector>();
+            if (grid == null || roomGeneration == null || roomGeneration.State == null)
+            {
+                return sockets;
+            }
+
+            var sharedWalls = RoomGeometry.FindSharedWalls(
+                room, roomGeneration.State.UnlockedLayout.Rooms);
+            foreach (var outlet in RuntimeWorldRegistry.GetWallOutlets())
+            {
+                if (outlet == null
+                    || !RuntimeWorldRegistry.TryGetRoomOwner(outlet, out var owner)
+                    || owner == room.Id)
+                {
+                    continue;
+                }
+
+                foreach (var wall in sharedWalls)
+                {
+                    if (wall.AdjacentWall.RoomId != owner)
+                    {
+                        continue;
+                    }
+
+                    var inward = wall.CandidateWall.Side switch
+                    {
+                        WallSide.Left => Vector2.right,
+                        WallSide.Right => Vector2.left,
+                        WallSide.Bottom => Vector2.up,
+                        _ => Vector2.down
+                    };
+                    foreach (var socket in outlet.ActiveSockets)
+                    {
+                        if (socket == null || !socket.isActiveAndEnabled
+                            || socket.IsConnected || !socket.IsTerminalEndpoint
+                            || Vector2.Dot(socket.ApproachDirection, inward) > -0.99f)
+                        {
+                            continue;
+                        }
+
+                        var position = (Vector2)socket.ConnectorTransform.position;
+                        bool horizontal = wall.Span.Orientation == WallOrientation.Horizontal;
+                        float normal = horizontal ? position.y : position.x;
+                        float tangent = horizontal ? position.x : position.y;
+                        if (Mathf.Abs(normal - wall.Span.FixedCoordinate) <= grid.CellSize * 0.5f
+                            && tangent >= wall.Span.Start && tangent <= wall.Span.End)
+                        {
+                            sockets.Add(socket);
+                        }
+                    }
+                }
+            }
+
+            return sockets;
+        }
+
+        private static bool CanReachSharedWallOutlet(
+            ApplianceSource product,
+            RoomPlacement room,
+            CableRoutingGrid grid,
+            IReadOnlyList<SocketConnector> sockets)
+        {
+            if (product == null || product.Cable == null || product.Cable.Origin == null)
+            {
+                return false;
+            }
+
+            foreach (var socket in sockets)
+            {
+                if (!CableRouteReachability.TryBuildPath(
+                        grid, product.Cable.Origin.position, socket,
+                        approachSearchRadius: 3, minRenderSegmentLength: 0.15f,
+                        out var path)
+                    || GridPathfinder.PathLength(path) > product.Cable.CableLength + 0.001f)
+                {
+                    continue;
+                }
+
+                // 종점의 접선 보정은 건너뛰고 새 방 측에서 끝나는 경로만 받는다.
+                var endpoint = (Vector2)socket.ConnectorTransform.position;
+                for (int i = path.Count - 2; i >= 0; i--)
+                {
+                    float side = Vector2.Dot(path[i] - endpoint, socket.ApproachDirection);
+                    if (Mathf.Abs(side) <= 0.001f)
+                    {
+                        continue;
+                    }
+
+                    if (side < 0f
+                        && path[i].x >= room.Bounds.MinX && path[i].x <= room.Bounds.MaxX
+                        && path[i].y >= room.Bounds.MinY && path[i].y <= room.Bounds.MaxY)
+                    {
+                        return true;
+                    }
+
+                    break;
+                }
+            }
+
+            return false;
         }
 
         private static bool CanReachWallOutlet(

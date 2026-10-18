@@ -66,8 +66,17 @@ A Wall Outlet is a Wall-mounted endpoint, not free-standing floor furniture like
 - Its root rotates to match the Wall it is mounted against (parallel to a vertical Wall for a vertical Wall, parallel to a horizontal Wall for a horizontal one) so the body sprite hugs the wall face rather than sitting sideways to it. This is a per-instance placement choice (each instance's own Transform rotation), not a prefab default — a procedural Room Generator placing outlets later must compute this the same way (from the Wall it is mounting against), not copy one fixed rotation.
 - It is never placed at a Wall/Wall corner or intersection.
 - Its `SocketConnector` is a **terminal endpoint for Cable routing, never a pass-through**: a Cable may route to a Socket's exact position as the last step of connecting to it, but no routing path may continue past a Socket to whatever is on the far side of its Wall. Room-to-Room Cable movement remains Door-only, unconditionally — see the Door / Room routing principle above, which this does not relax.
-- Concretely, `CableRoutingController` resolves a small, wall-thickness-scale **Approach Point** (the nearest walkable cell to the Socket's own — typically Wall-Blocked — cell, searched within `socketApproachSearchRadius`, deliberately much smaller than the general-purpose `nearestValidSearchRadius`) and treats it as the Socket's routable/acquirable anchor alongside the Socket's exact position. This keeps the Approach Point on the Socket's own room-interior side without adding a room-membership system: the search radius is simply too short to tunnel through a Wall to a different Room's floor on the far side.
-- Production Room content reachability explicitly requests the terminal's front/room-facing Approach Point. This is required on a shared Wall: the Socket's authored sub-cell offset can make the adjacent Room's cell geometrically closer even though the Outlet belongs to the promoted Room. The general cable-routing call keeps its existing default; pointer acquisition enforces the approach side separately.
+- **공유 벽 양방향 연결(2026-10-18 사용자 결정, TASK-021):** 같은 Socket에 양쪽 방에서 직접 연결할 수 있으며 소켓당 플러그 1개 제한은 유지한다. `CableRouteReachability`가 `socketApproachSearchRadius` 안에서 앞·뒤 국소 접근 셀을 각각 찾고, 실제 도달 가능한 경로의 렌더링 길이를 비교한다. 한쪽 셀이 Socket에 더 가깝다는 이유만으로 반대쪽 제품이 문을 우회하지 않는다. 동률에서는 전면 경로를 유지한다.
+- 포인터 획득은 같은 Grid 기반 접근 셀 판정을 사용한다. 반대편 유효 바닥이 있는 공유 벽은 허용하고, 접근 셀이 없는 외벽 바깥은 거부한다. `SocketConnector.IsPointerOnApproachSide`는 authored 전면 여부만 나타내며 gameplay 획득 허용 판정이 아니다. preview/drop/최근 분리 소켓 재연결도 공통 판정을 사용한다.
+- Room3+ base-product는 기존 공유벽의 active/free Socket에 초기 케이블 길이로 새 방 측에서 닿는 배치를 우선한다. 유효 위치가 없으면 자기방 `terminalFrontOnly: true` 배치로 fallback한다. starter·redistribution은 기존 자기방 전면 계약을 유지한다. 양쪽 콘센트 동시 도달은 필수가 아니다. Socket은 경로의 마지막 endpoint이며 Grid Wall 상태를 변경하지 않는다.
+
+### 전력 부족 preview / drop 계약 (2026-10-18, TASK022)
+
+- `CableRoutingController.TryResolveSocketCandidate`와 드래그 preview는 active/free·접근측·경로·케이블 길이·graph 조건으로 가장 가까운 Socket을 선택한다. 집/멀티탭 전력 부족은 시각 스냅을 막지 않는다.
+- preview는 pairing·Powered·사용량·연결 이벤트를 변경하지 않는다. release에서 현재 graph와 전력 예산을 다시 검사한 뒤에만 Connect한다. 부족한 가까운 후보 대신 먼 소켓으로 몰래 연결하지 않는다.
+- 전력 초과는 기존 거절 사유/이벤트/밀어내기를 사용한다. 실제 거절 위치 적용 성공을 별도 결과로 전달해 전체 drag-end의 일반 fallback이 덮어쓰지 않게 한다. 적용 불가 시 일반 fallback은 계속한다.
+- 최근 분리 소켓도 같은 최종 전력 gate를 거친다. no-drift 기존 연결 유지, 이동 후 release의 지연 분리 정책은 바꾸지 않는다.
+- 집중 회귀: `Assets/Tests/Editor/Power/SocketPreviewBudgetTests.cs`. 실제 Input Entry 및 Human Play Check와 Logic Test는 별도 기록한다.
 
 ### Connected vs. Powered (confirmed, P0-1E)
 
@@ -99,7 +108,7 @@ Not implemented yet. When Cable (Base and/or Flow) visually overlaps a Product/P
 
 - `socketAcquisitionRadius` (0.25), `socketDetachRadius` (0.4), `socketApproachSearchRadius` (3 cells), and the Plug's `connectedSortingOrder`/`draggingSortingOrder` values are feel-tuning placeholders, not confirmed balance/art decisions — expect them to move once more Sockets/products exist to test against.
 - Wall Outlet rotation-to-match-its-wall is set manually per scene instance; there is no procedural "compute rotation from the Wall being mounted against" helper yet for a future Room Generator to call.
-- The "never connect through a Socket to the far side of its Wall" rule is enforced structurally (a deliberately short Approach-Point search radius) and was verified against a pointer on the wrong/outer side of a Wall, but never against an actual second Room sharing that same Wall — none exists in the current test scene. Re-verify once two Rooms share a Wall with Sockets on it.
+- 이전 단일 방 검증의 후면 거부 규칙은 TASK-021의 공유 벽 양방향 사용자 결정으로 대체된다. 외벽 바깥 획득 거부와 Socket을 경유하는 일반 방간 벽 관통 금지는 유지하며, 양측 바닥이 존재하는 회귀 테스트와 실제 드래그 검증을 구분한다.
 
 ## Narrow Search Order
 
@@ -137,7 +146,7 @@ Not implemented yet. When Cable (Base and/or Flow) visually overlaps a Product/P
 - `WallOutlet.InitialSocketCount` initializes runtime `ActiveSocketCount` in the supported range 1–5. `TryUpgradeActiveSocketCount` grows exactly one contiguous module, keeps Whole01 First active, activates only the final active Whole's End, publishes its count event once, and notifies graph topology only after success. Count decrease remains unsupported.
 - Geometry is the union of authored Whole01 First, Body01–N, and EndN `BoxCollider2D` components. Inactive Sockets are excluded from interaction, magnetic selection, direct connection, validation, source-live checks, usage, and graph traversal.
 - Wall Outlet remains a fixed House-backed terminal root: no Cable/Plug, drag, placement reservation, local allowance, powered cascade, or PowerInfo. Count changes never mutate House allowance. Active Products contribute through House accounting only.
-- Terminal routing remains `Grid path → short room-side approach cell → exact Socket endpoint`. Opposite-side acquisition is rejected, a Socket is never a portal, and cross-room traversal remains Door-only.
+- Terminal routing은 `Grid path → 국소 접근 셀 → 정확한 Socket endpoint`를 유지한다. TASK-021부터 유효한 바닥이 있는 공유 벽 양측의 획득을 허용하지만, Socket은 방간 통과 포털이 아니며 일반 방간 이동은 Door-only이다.
 - `InfiniteMode.unity` now contains exactly one unified instance under `Wall_Outlets`, source GUID `c7bc3b7b69ecb644cbe01fb717727a5c`, local position `(4, 1, 0)`, rotation Z `90°`, scale `(1, 1, 1)`, and initial count `1`. The staged scene contains no legacy Wall Outlet GUID. House allowance/max remain `8 / 22`; all five legacy prefab assets are unchanged.
 - Legacy `Wall_Outlet_One`–`Wall_Outlet_Five` assets remain for compatibility/reference only. A future Room Generator must instantiate the unified source, orient it from its mounting Wall, and supply count 1–5 through a contract shaped as `CreateWallOutlet(wall, position, socketCount)`; that API is documented direction, not implemented production integration.
 

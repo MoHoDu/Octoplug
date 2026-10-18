@@ -42,7 +42,7 @@ Current rules:
 - `GameBalanceArchive` is the validated local runtime mirror of the Sheet-authored balance tables; runtime generation does not access the Sheet or network.
 - Every gameplay-active room finalizes exactly one required Wall Outlet before Product placement.
 - Starter Rooms use `초기 구성`; Room 3+ selects exactly one base Product from `제품 등장 풀`. RoomConfig Product count fields are not runtime base-spawn authority.
-- Product placement exhaustively searches full-footprint grid candidates, rejects positive-area authored-bounds overlap with Products/PowerStrips, and requires a production-routed path to a room-owned outlet within the initial cable length.
+- Product 배치는 full-footprint Grid 후보를 전수 탐색하고 Products/PowerStrips와의 양의 면적 겹침을 거부한다. Room3+ base-product는 실제 공유 구간의 기존 active/free Socket까지 새 방 측으로 초기 케이블 길이 내 도달하는 위치를 우선하며, 없으면 자기방 전면 도달 위치로 fallback한다. 양쪽 콘센트 동시 도달은 필수가 아니며 starter·redistribution은 자기방 전면 계약을 유지한다.
 - Accepted Products reserve their placement cells synchronously. Base-content shortfall rolls back generated equipment and restores the locked hint rather than leaving an empty unlocked Room.
 - Redistribution runs only after base content succeeds and adds at most one Product to each selected distinct Room.
 - Successful promotion renders only the promoted Room, newly committed Door views, and the following locked hint; immutable existing room walls and runtime doors are preserved. Full-state rendering remains the rollback/recovery path.
