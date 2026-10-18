@@ -5,18 +5,8 @@ using UnityEngine;
 
 namespace Octoplug.CameraFraming.Unity
 {
-    /// <summary>
-    /// Applies bounded Pan to the Cinemachine camera while leaving zoom ownership separate.
-    /// </summary>
-    /// <remarks>
-    /// The Pan boundary is never a cached/fixed world-space range: <see cref="ApplyPanDelta"/>
-    /// recomputes it from the CURRENT <c>cinemachineCamera.Lens.OrthographicSize</c> and
-    /// <c>outputCamera.aspect</c> on every single Pan request, so a Mouse Wheel / Touchpad / Pinch
-    /// Zoom or a one-shot Hint auto-framing widens or narrows the reachable range immediately, with
-    /// no Room Generation event required to "refresh" it. Only <see cref="houseBounds"/> itself
-    /// (the actual generated House footprint) is cached, and only Room Generation state changes
-    /// (<see cref="UpdateHouseBounds"/>) update that.
-    /// </remarks>
+    /// <summary>현재 가용 화면과 Lens를 기준으로 Cinemachine 카메라의 Pan을 제한한다.</summary>
+    [DefaultExecutionOrder(0)]
     public sealed class HouseCameraPanController : MonoBehaviour
     {
         [Header("References")]
@@ -29,13 +19,24 @@ namespace Octoplug.CameraFraming.Unity
         [SerializeField]
         private CameraPanInputReader panInput;
 
+        [Tooltip("화면 상단을 가리는 HUD 전체 영역. 미지정하면 상단을 제외하지 않습니다.")]
+        [SerializeField]
+        private RectTransform topHudArea;
+
+        [Tooltip("화면 하단을 가리는 주민 UI 전체 영역. 미지정하면 하단을 제외하지 않습니다.")]
+        [SerializeField]
+        private RectTransform bottomResidentsArea;
+
         [Header("[Pan] Boundary")]
-        [Tooltip("[Pan] House Bounds 외부에 추가로 허용되는 Camera 이동 여백 (world units). The 'House Bounds' fed in here is the current unlocked House plus the current Hint Room, so Pan can always reach a Hint sitting just outside the unlocked footprint. Recomputed against the CURRENT Orthographic Size and aspect every time a Pan is applied, so Zoom In/Out immediately widens/narrows the reachable range with no Room event required.")]
+        [Tooltip("현재 보이는 집과 Hint bounds 바깥에 허용하는 이동 여백(world units).")]
         [SerializeField]
         private float panBoundaryMargin = 2f;
 
         private RoomBounds2D houseBounds;
         private bool hasHouseBounds;
+        private readonly Vector3[] hudCorners = new Vector3[4];
+        private Vector2 queuedPixelDelta;
+        private HouseCameraZoomController frameDriver;
 
         public event Action CameraMotionStarted;
 
@@ -59,7 +60,7 @@ namespace Octoplug.CameraFraming.Unity
         {
             if (panInput != null)
             {
-                panInput.PanDeltaRequested += ApplyPanDelta;
+                panInput.PixelPanDeltaRequested += QueuePixelPanDelta;
             }
         }
 
@@ -67,8 +68,23 @@ namespace Octoplug.CameraFraming.Unity
         {
             if (panInput != null)
             {
-                panInput.PanDeltaRequested -= ApplyPanDelta;
+                panInput.PixelPanDeltaRequested -= QueuePixelPanDelta;
             }
+            queuedPixelDelta = Vector2.zero;
+        }
+
+        private void LateUpdate()
+        {
+            // Zoom 참조가 없는 기존 사용처도 Pan 단독으로 동작한다.
+            if (frameDriver == null || !frameDriver.isActiveAndEnabled)
+            {
+                ApplyQueuedPixelPan();
+            }
+        }
+
+        internal void SetFrameDriver(HouseCameraZoomController driver)
+        {
+            frameDriver = driver;
         }
 
         public void UpdateHouseBounds(RoomBounds2D bounds)
@@ -82,22 +98,58 @@ namespace Octoplug.CameraFraming.Unity
             hasHouseBounds = true;
         }
 
+        public void QueuePixelPanDelta(Vector2 pixelDelta, float sensitivity)
+        {
+            if (!IsFinite(pixelDelta.x) || !IsFinite(pixelDelta.y)
+                || !IsFinite(sensitivity) || sensitivity < 0f)
+            {
+                return;
+            }
+
+            queuedPixelDelta += pixelDelta * sensitivity;
+        }
+
+        public void ApplyQueuedPixelPan()
+        {
+            var pixels = queuedPixelDelta;
+            queuedPixelDelta = Vector2.zero;
+            if (pixels == Vector2.zero || !TryGetUsableViewport(out var viewport))
+            {
+                return;
+            }
+
+            var pixelRect = outputCamera.pixelRect;
+            var delta = PanDeltaMapper.Map(new Point2D(pixels.x, pixels.y),
+                cinemachineCamera.Lens.OrthographicSize, outputCamera.aspect,
+                pixelRect.width, pixelRect.height, 1f);
+            ApplyPanDelta(new Vector2(delta.X, delta.Y), viewport);
+        }
+
+        internal void DiscardQueuedPixelPan()
+        {
+            queuedPixelDelta = Vector2.zero;
+        }
+
+        // 외부 world-delta 호출은 기존처럼 즉시 반영하며 production 입력만 지연 변환한다.
         public void ApplyPanDelta(Vector2 worldDelta)
         {
-            if (!hasHouseBounds || worldDelta == Vector2.zero)
+            if (TryGetUsableViewport(out var viewport))
+            {
+                ApplyPanDelta(worldDelta, viewport);
+            }
+        }
+
+        private void ApplyPanDelta(Vector2 worldDelta, UsableViewport viewport)
+        {
+            if (worldDelta == Vector2.zero || !IsFinite(worldDelta.x) || !IsFinite(worldDelta.y)
+                || !TryGetRange(viewport, out var range))
             {
                 return;
             }
 
             var current = cinemachineCamera.transform.position;
-            var range = PanBoundaryCalculator.Compute(
-                houseBounds,
-                cinemachineCamera.Lens.OrthographicSize,
-                outputCamera.aspect,
-                panBoundaryMargin);
-            var clamped = range.Clamp(
-                new Point2D(current.x, current.y),
-                new Point2D(current.x + worldDelta.x, current.y + worldDelta.y));
+            var clamped = range.ClampDelta(new Point2D(current.x, current.y),
+                new Point2D(worldDelta.x, worldDelta.y));
             var next = new Vector3(clamped.X, clamped.Y, current.z);
             if (next == current)
             {
@@ -111,5 +163,113 @@ namespace Octoplug.CameraFraming.Unity
             }
             CameraMotionStarted?.Invoke();
         }
+
+        internal bool TryGetCorrectionTarget(UsableViewport viewport, out Vector2 target)
+        {
+            target = default;
+            if (!TryGetRange(viewport, out var range))
+            {
+                return false;
+            }
+
+            var current = cinemachineCamera.transform.position;
+            var closest = range.ClosestSafeCoordinate(new Point2D(current.x, current.y));
+            target = new Vector2(closest.X, closest.Y);
+            return true;
+        }
+
+        private bool TryGetRange(UsableViewport viewport, out PanCenterRange range)
+        {
+            range = default;
+            if (!hasHouseBounds || !viewport.IsValid || cinemachineCamera == null
+                || outputCamera == null || !IsPositiveFinite(outputCamera.aspect)
+                || !IsPositiveFinite(cinemachineCamera.Lens.OrthographicSize))
+            {
+                return false;
+            }
+
+            range = PanBoundaryCalculator.Compute(houseBounds,
+                cinemachineCamera.Lens.OrthographicSize, outputCamera.aspect,
+                panBoundaryMargin, viewport.TopInsetFraction, viewport.BottomInsetFraction);
+            return true;
+        }
+
+        public bool TryGetUsableViewport(out UsableViewport usableViewport)
+        {
+            usableViewport = default;
+            if (outputCamera == null)
+            {
+                return false;
+            }
+
+            var viewport = outputCamera.pixelRect;
+            if (!IsPositiveFinite(viewport.width) || !IsPositiveFinite(viewport.height)
+                || !IsPositiveFinite(outputCamera.aspect))
+            {
+                return false;
+            }
+
+            usableViewport = new UsableViewport(
+                GetInsetFraction(topHudArea, viewport, true),
+                GetInsetFraction(bottomResidentsArea, viewport, false));
+            return usableViewport.IsValid;
+        }
+
+        private float GetInsetFraction(RectTransform area, Rect viewport, bool fromTop)
+        {
+            if (area == null || !area.gameObject.activeInHierarchy)
+            {
+                return 0f;
+            }
+
+            var canvas = area.GetComponentInParent<Canvas>();
+            if (canvas == null || !canvas.isActiveAndEnabled || !canvas.rootCanvas.isActiveAndEnabled)
+            {
+                return 0f;
+            }
+
+            var rootCanvas = canvas.rootCanvas;
+            var uiCamera = rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : rootCanvas.worldCamera;
+            if (rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay && uiCamera == null)
+            {
+                return 0f;
+            }
+
+            area.GetWorldCorners(hudCorners);
+            var min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            var max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (var i = 0; i < hudCorners.Length; i++)
+            {
+                var point = RectTransformUtility.WorldToScreenPoint(uiCamera, hudCorners[i]);
+                if (!IsFinite(point.x) || !IsFinite(point.y))
+                {
+                    return float.NaN;
+                }
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+
+            // 지정한 가장자리에 닿은 UI와 실제 출력 viewport의 교집합만 제외한다.
+            if (max.x <= viewport.xMin || min.x >= viewport.xMax)
+            {
+                return 0f;
+            }
+
+            if (fromTop)
+            {
+                return min.y >= viewport.yMax || max.y < viewport.yMax
+                    ? 0f
+                    : Mathf.Clamp01((viewport.yMax - Mathf.Max(viewport.yMin, min.y)) / viewport.height);
+            }
+
+            return max.y <= viewport.yMin || min.y > viewport.yMin
+                ? 0f
+                : Mathf.Clamp01((Mathf.Min(viewport.yMax, max.y) - viewport.yMin) / viewport.height);
+        }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool IsPositiveFinite(float value) => IsFinite(value) && value > 0f;
     }
 }

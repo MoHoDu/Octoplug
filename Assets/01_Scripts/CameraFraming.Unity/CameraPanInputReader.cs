@@ -36,6 +36,7 @@ namespace Octoplug.CameraFraming.Unity
         private float panSensitivity = 1f;
 
         public event Action<Vector2> PanDeltaRequested;
+        public event Action<Vector2, float> PixelPanDeltaRequested;
 
         private readonly PanGestureTracker gesture = new();
         private Vector2 previousPointerPosition;
@@ -198,6 +199,14 @@ namespace Octoplug.CameraFraming.Unity
                 return;
             }
 
+            // Production은 입력을 수집만 하고 pre-Brain tick의 최신 Lens로 변환한다.
+            PixelPanDeltaRequested?.Invoke(screenDelta, panSensitivity);
+            if (PanDeltaRequested == null || outputCamera.pixelWidth <= 0 || outputCamera.pixelHeight <= 0)
+            {
+                return;
+            }
+
+            // 기존 world-delta 구독자의 계약은 유지하되 production Pan은 이 이벤트를 쓰지 않는다.
             var worldDelta = PanDeltaMapper.Map(
                 new Point2D(screenDelta.x, screenDelta.y),
                 outputCamera.orthographicSize,

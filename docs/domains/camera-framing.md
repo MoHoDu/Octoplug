@@ -16,7 +16,8 @@ Current rules:
 - `CameraDesignReference` records 1920x1080 / 16:9 as the tuning reference only. Runtime calculations always use actual `Camera.aspect`.
 - `HintFramingCalculator` fits the complete Hint min/max bounds plus margin at the current Camera center, never moves the Camera, never forces zoom-in, and has no unlocked-House upper clamp.
 - `PanDeltaMapper` converts pointer pixel displacement into opposite Camera world displacement using current Orthographic Size, actual aspect, viewport dimensions, and sensitivity.
-- `PanBoundaryCalculator` derives legal Camera-center ranges from actual House bounds plus margin and current viewport half-extents. If the viewport exceeds the bounded House on an axis, that axis is collapsed and Pan retains its current coordinate.
+- `PanBoundaryCalculator`는 실제 House bounds + margin과 가용 viewport에서 Camera 중심 범위를 계산한다. 상단 t/하단 b, Orthographic Size S이면 Y 범위는 `[house.MinY-margin+S-2*S*b, house.MaxY+margin-S+2*S*t]`. X는 기존과 같다. 범위 밖의 수동 입력은 요청 delta만큼 안쪽으로 복구하며 순간 clamp하지 않는다. collapsed 축도 집 전체를 담는 containment 구간을 보존하고 이미 안전하면 현재 좌표를 유지한다. 기존 4/5인자 overload를 보존한다.
+- `UsableViewport`는 상하단 비율의 유효성, 중앙 정렬 초기 fit, 위치 고정 zoom-out fit을 계산하는 순수 helper다. 전면 가림/불가능한 고정 중심 fit은 명시적인 실패로 반환하며 무한·음수 Lens를 만들지 않는다.
 - `PanGestureTracker` latches ownership as `CameraPan` or `GameplayBlocked` at Pointer Down. `MultiTouchSuppressed` prevents Pan from resuming from a remaining pinch finger; all touches must release before a new Pan can begin.
 
 ## Unity Integration
@@ -36,17 +37,29 @@ The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode
 - Broad Room floor/wall/door colliders do not block empty-world Pan.
 - `CameraPanInputReader` separately owns Mouse and single-touch Pan input. It reads `panSensitivity` live, latches Down ownership until Up, suppresses emulated Mouse while touch is active, and yields completely to pinch during multitouch.
 - `HouseCameraPanController` moves only the `CinemachineCamera` transform. It applies the latest cached "visible house" bounds (see below), the **current** Lens size, the **current** output aspect, and `panBoundaryMargin` — recomputed fresh on every single Pan request, never cached as a fixed world-space range. Zoom In/Out therefore widens/narrows the reachable range immediately, with no Room Generation event required. Main Camera is never arbitrarily transformed.
-- Boundary clamping occurs only when Pan is requested; Zoom, aspect change, House growth, and Hint framing do not themselves recenter or move the Camera.
+- `HouseCameraPanController.topHudArea`/`bottomResidentsArea`는 InfiniteMode의 기존 `Canvas/HUD_Area`/`Canvas/Residents_Area`에 연결한다. world corners→screen→`outputCamera.pixelRect` 교집합으로 상하단 가림을 구하고 Zoom도 같은 결과를 사용한다. 각 UI 미지정/비활성/Canvas disabled/해당 가장자리 비겹침은 inset0; viewport0/전면 가림은 적용을 보류한다. 고정 HUD 픽셀 크기는 사용하지 않는다.
+- TASK023 후속 승인: 시작 생성과 Canvas layout 준비 후 최신 visible-house를 가용 화면에 1회 fit/정렬한다. 이후 수동 zoom에는 기존 smoothing 시간으로 최근접 안전 위치까지 연속 보정하되 drag delta에는 지연을 추가하지 않는다. Hint/Reveal/resize 자체는 위치 보존; 범위 밖에서도 다음 작은 drag를 큰 clamp로 바꾸지 않는다.
+- Zoom이 pre-Brain LateUpdate를 구동하여 최신 Lens→manual 보정→수집된 pixel Pan 변환/적용→Reveal 완료 순서를 보장한다. 기존 world-delta public 호출은 즉시 적용한다. Hint/Reveal은 유효한 가용 화면에서 위치 고정·zoom-out-only target을 구하고, 불가능한 fit은 pending으로 보관한다.
 
 ### Room Generation bridge
 
 - `RoomGenerationCameraFramingBridge` is the sole Room Generation → Camera connection.
-- On `ProductionRoomGenerationController.NextHintCreated`, it computes two distinct bounds from the same unlocked Room list: the **unlocked-only** house bounds (fed to `RecomputeDynamicMaxOrthographicSize`) and **visible-house** bounds — unlocked Rooms plus the current Hint's bounds (fed to `cameraPan.UpdateHouseBounds`). It then requests unchanged full-bounds Hint framing.
-- Future GameFlow may call `RequestRoomReveal(RoomPlacement)` after Room content is ready. The bridge forwards the zoom-only request and emits `CameraRevealCompleted` only after the smoothed target is reached (or immediately when no zoom-out is needed).
+- `ProductionRoomGenerationController.NextHintCreated`에서 unlocked-only bounds는 dynamic max에, unlocked+Hint visible bounds는 Pan에 전달한다. 최초 tick 전 이벤트는 최신 visible bounds의 초기 fit으로 병합하고, 이후 이벤트는 위치 고정 Hint framing으로 전달한다.
+- 실제 `GameFlowManager`가 `RequestRoomReveal(RoomPlacement)`를 사용하고 완료 후 RewardDelay로 진행한다. Bridge는 zoom-only 요청을 전달하고 유효한 fit의 smoothed target에 도달했을 때만 `CameraRevealCompleted`를 전달한다(이미 보이면 즉시).
 - Room Generation remains unaware of Camera, Cinemachine, Zoom, or Pan.
 
 ## Verification Evidence
 
+### TASK023 후속 (2026-10-19, 사용자 Human PASS)
+- 초기 fit/상하단 UI/manual zoom 연속보정 구현, core178/178·집중 Editor61/61 PASS 및 Unity compile completed. 전체244/235 PASS/기존9 FAIL. Scene 참조3줄만 변경, Zoom order0 < Brain order100 확인.
+- 저장 모달/CLI timeout 후 재연결, live 비교 사본과 디스크 동일 확인·저장 및 빈 테스트 Scene으로 복구. 사용자가 해결 확인 및 checkpoint push 요청. 당시 미실행 자동 Input Entry를 소급 PASS로 주장하지 않는다. 범위 밖 폰트 변경과 실패9건은 TASK023 handoff 참조.
+
+### TASK023 이전 상단 수정 (2026-10-18, 이후 사용자 Human PASS)
+- 순수 CameraFraming 61/61 PASS, 집중 Unity Pan 22/22 PASS. 전체 EditMode 211 중202 PASS/9 FAIL: 직전191/182/9 대비 추가20건 통과, 기존9건 동일. 최종 컴파일 up_to_date.
+- 실제 Input System → Player Loop 경로로 상단 방 확대/Pan, TV preview→release→powered, HUD Down 차단 및 Pan capture의 HUD 통과 유지 확인. 16:9/4:3와 동시 wheel+Pan에서 최신 Lens 경계 적용 확인.
+- 터치 소유권/멀티터치 후 전체 release 억제는 순수 회귀 통과. 이번 물리 터치 장치 확인은 미실행. 자세한 증거·범위 밖 에셋 변경은 TASK023 handoff 참조.
+
+### TASK006 당시 기록
 - Camera Framing pure suite: 46 passing tests; strict build has 0 warnings/errors.
 - Room Generation regression suite: 66 passing tests.
 - Actual Input System mouse state events verified empty-world Pan direction and latched ownership in Play Mode.
@@ -93,7 +106,7 @@ See: `docs/decisions/infinity-progression-and-reward-loop.md` section 7 and 8.
 
 ## Narrow Search Order
 
-1. This map and current Task 006.
+1. 현재 active Task와 이 map (HUD Pan 수정: TASK023, 초기 Pan 기록: TASK006).
 2. `Assets/01_Scripts/CameraFraming/` and `Assets/01_Scripts/CameraFraming.Unity/`.
 3. [Room Generation](room-generation.md) for `HintRoomCreated` and actual bounds.
 4. Interaction-domain files only when explicit hit semantics must be verified.
@@ -102,5 +115,5 @@ See: `docs/decisions/infinity-progression-and-reward-loop.md` section 7 and 8.
 ## Open Decisions
 
 - **`Assets/00_Scenes/Demo/RoomGenerationTest.unity` is not a production copy target.** Production integration is wired fresh against `InfiniteMode.unity`; retain the test scene only as historical verification reference.
-- Any automatic Camera relocation; Hint framing and Room Reveal remain zoom-only after manual Pan.
+- 최초 fit 및 manual zoom의 최근접 안전 위치 보정은 TASK023 후속 승인 범위다. 그 밖의 자동 위치 변경은 새 결정이 필요하며 Hint/Room Reveal은 zoom-only/위치 보존을 유지한다.
 - Cinematic/session-level framing beyond the external Room Reveal request/completion boundary.

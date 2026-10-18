@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using Octoplug.CameraFraming;
 using Octoplug.RoomGeneration;
@@ -155,6 +156,281 @@ namespace CameraFraming.Core.Tests
             // full right edge (plus margin) is inside the viewport.
             var reachUsingVisibleHouse = visibleRange.Clamp(new Point2D(0f, 0f), new Point2D(1000f, 0f));
             Assert.That(reachUsingVisibleHouse.X + halfWidth, Is.GreaterThanOrEqualTo(hint.MaxX + margin - 1e-4f));
+        }
+
+        [TestCase(5f)]
+        [TestCase(50f)]
+        public void Compute_ZeroTopInsetPreservesFourArgumentContract(float size)
+        {
+            var house = new RoomBounds2D(-20f, -15f, 40f, 30f);
+            var legacy = PanBoundaryCalculator.Compute(house, size, 2f, 2f);
+            var inset = PanBoundaryCalculator.Compute(house, size, 2f, 2f, topInsetFraction: 0f);
+
+            Assert.That(inset.X.Min, Is.EqualTo(legacy.X.Min));
+            Assert.That(inset.X.Max, Is.EqualTo(legacy.X.Max));
+            Assert.That(inset.X.IsCollapsed, Is.EqualTo(legacy.X.IsCollapsed));
+            Assert.That(inset.Y.Min, Is.EqualTo(legacy.Y.Min));
+            Assert.That(inset.Y.Max, Is.EqualTo(legacy.Y.Max));
+            Assert.That(inset.Y.IsCollapsed, Is.EqualTo(legacy.Y.IsCollapsed));
+        }
+
+        [TestCase(0.1f)]
+        [TestCase(0.25f)]
+        [TestCase(0.75f)]
+        public void Compute_TopInsetExtendsOnlyUpperBoundaryAndReachesUsableTop(float inset)
+        {
+            const float size = 5f;
+            const float margin = 2f;
+            var house = new RoomBounds2D(-20f, -15f, 40f, 30f);
+            var range = PanBoundaryCalculator.Compute(house, size, 2f, margin, inset);
+            var high = range.Clamp(new Point2D(0f, 0f), new Point2D(100f, 100f));
+            var low = range.Clamp(new Point2D(0f, 0f), new Point2D(-100f, -100f));
+
+            Assert.That(low.X, Is.EqualTo(-12f));
+            Assert.That(high.X, Is.EqualTo(12f));
+            Assert.That(low.Y, Is.EqualTo(-12f));
+            Assert.That(high.Y, Is.EqualTo(12f + 2f * size * inset).Within(1e-5f));
+            Assert.That(high.Y + size - 2f * size * inset,
+                Is.EqualTo(house.MaxY + margin).Within(1e-5f));
+            Assert.That((range.Y.Min + range.Y.Max) / 2f,
+                Is.EqualTo(size * inset).Within(1e-5f));
+        }
+
+        [Test]
+        public void Compute_TopInsetReleasesPreviouslyCollapsedVerticalAxis()
+        {
+            var house = new RoomBounds2D(-4f, -4f, 8f, 8f);
+            var legacy = PanBoundaryCalculator.Compute(house, 5f, 2f, 0f);
+            var inset = PanBoundaryCalculator.Compute(house, 5f, 2f, 0f, 0.3f);
+
+            Assert.That(legacy.Y.IsCollapsed, Is.True);
+            Assert.That(inset.X.IsCollapsed, Is.True);
+            Assert.That(inset.Y.IsCollapsed, Is.False);
+            Assert.That(inset.Y.Min, Is.EqualTo(1f));
+            Assert.That(inset.Y.Max, Is.EqualTo(2f).Within(1e-5f));
+            Assert.That(inset.Clamp(new Point2D(3f, -2f), new Point2D(100f, 100f)),
+                Is.EqualTo(new Point2D(3f, 2f)));
+        }
+
+        [Test]
+        public void Compute_HouseFitsUsableHeightButCurrentIsOutside_RecoversOnlyToNearestSafeCoordinate()
+        {
+            var range = PanBoundaryCalculator.Compute(
+                new RoomBounds2D(-4f, -4f, 8f, 8f), 5f, 2f, 0f, 0.1f);
+            var current = new Point2D(3f, -2f);
+
+            Assert.That(range.X.IsCollapsed, Is.True);
+            Assert.That(range.Y.IsCollapsed, Is.True);
+            var recovered = range.Clamp(current, new Point2D(100f, 100f));
+            Assert.That(recovered.X, Is.EqualTo(3f));
+            Assert.That(recovered.Y, Is.EqualTo(0f).Within(1e-5f));
+        }
+
+        [Test]
+        public void Compute_UsableHeightExactlyMatchesHouse_IsSinglePointNotCollapsed()
+        {
+            // Size 4 and inset 1/4 leave exactly six world units of usable height.
+            var range = PanBoundaryCalculator.Compute(
+                new RoomBounds2D(-4f, -3f, 8f, 6f), 4f, 1f, 0f, 0.25f);
+
+            Assert.That(range.X.IsCollapsed, Is.False);
+            Assert.That(range.Y.IsCollapsed, Is.False);
+            Assert.That(range.Y.Min, Is.EqualTo(1f));
+            Assert.That(range.Y.Max, Is.EqualTo(1f));
+            Assert.That(range.Clamp(new Point2D(3f, -2f), new Point2D(100f, 100f)),
+                Is.EqualTo(new Point2D(3f, 1f)));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(1f)]
+        [TestCase(1.01f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void Compute_InvalidTopInsetThrows(float inset)
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PanBoundaryCalculator.Compute(new RoomBounds2D(-20f, -15f, 40f, 30f),
+                    5f, 2f, 2f, inset));
+
+            Assert.That(exception!.ParamName, Is.EqualTo("topInsetFraction"));
+        }
+
+        [Test]
+        public void Compute_TopInsetUsesCurrentZoomAndAspect()
+        {
+            var house = new RoomBounds2D(-20f, -15f, 40f, 30f);
+            var initial = PanBoundaryCalculator.Compute(house, 5f, 2f, 2f, 0.25f);
+            var zoomedIn = PanBoundaryCalculator.Compute(house, 2f, 2f, 2f, 0.25f);
+            var narrowAspect = PanBoundaryCalculator.Compute(house, 2f, 1f, 2f, 0.25f);
+
+            Assert.That(initial.Y.Min, Is.EqualTo(-12f));
+            Assert.That(initial.Y.Max, Is.EqualTo(14.5f));
+            Assert.That(zoomedIn.Y.Min, Is.EqualTo(-15f));
+            Assert.That(zoomedIn.Y.Max, Is.EqualTo(16f));
+            Assert.That(zoomedIn.X.Max, Is.EqualTo(18f));
+            Assert.That(narrowAspect.X.Max, Is.EqualTo(20f));
+            Assert.That(narrowAspect.Y.Min, Is.EqualTo(zoomedIn.Y.Min));
+            Assert.That(narrowAspect.Y.Max, Is.EqualTo(zoomedIn.Y.Max));
+        }
+
+        [TestCase(0.25f, 0.125f)]
+        [TestCase(0f, 0.75f)]
+        [TestCase(0.75f, 0.125f)]
+        public void Compute_BothInsetsReachUsableEdgesAndPreserveHorizontalRange(float top, float bottom)
+        {
+            var house = new RoomBounds2D(-20f, -15f, 40f, 30f);
+            var range = PanBoundaryCalculator.Compute(house, 5f, 2f, 2f, top, bottom);
+
+            Assert.That(range.X.Min, Is.EqualTo(-12f));
+            Assert.That(range.X.Max, Is.EqualTo(12f));
+            Assert.That(range.Y.Min + 5f * (2f * bottom - 1f), Is.EqualTo(-17f).Within(1e-5f));
+            Assert.That(range.Y.Max + 5f * (1f - 2f * top), Is.EqualTo(17f).Within(1e-5f));
+        }
+
+        [Test]
+        public void Compute_ZeroBottomInsetPreservesFiveArgumentContract()
+        {
+            var house = new RoomBounds2D(-4f, -4f, 8f, 8f);
+            var legacy = PanBoundaryCalculator.Compute(house, 5f, 2f, 0f, 0.1f);
+            var both = PanBoundaryCalculator.Compute(house, 5f, 2f, 0f, 0.1f, 0f);
+            Assert.That(both.X, Is.EqualTo(legacy.X));
+            Assert.That(both.Y, Is.EqualTo(legacy.Y));
+        }
+
+        [Test]
+        public void Compute_CollapsedEndpointsDescribeFullContentContainment()
+        {
+            var range = PanBoundaryCalculator.Compute(new RoomBounds2D(-4f, -3f, 8f, 6f),
+                10f, 2f, 1f, 0.25f, 0.125f);
+            Assert.That(range.X.IsCollapsed, Is.True);
+            Assert.That(range.X.Min, Is.EqualTo(-15f));
+            Assert.That(range.X.Max, Is.EqualTo(15f));
+            Assert.That(range.Y.IsCollapsed, Is.True);
+            Assert.That(range.Y.Min, Is.EqualTo(-1f));
+            Assert.That(range.Y.Max, Is.EqualTo(3.5f));
+            Assert.That(range.Clamp(new Point2D(1f, 1f), new Point2D(-100f, 100f)),
+                Is.EqualTo(new Point2D(1f, 1f)));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void Compute_InvalidBottomInsetThrows(float bottom)
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PanBoundaryCalculator.Compute(new RoomBounds2D(-4f, -3f, 8f, 6f), 5f, 2f, 1f, 0f, bottom));
+            Assert.That(exception!.ParamName, Is.EqualTo("bottomInsetFraction"));
+        }
+
+        [TestCase(0.5f, 0.5f)]
+        [TestCase(0.75f, 0.5f)]
+        public void Compute_NoUsableHeightThrows(float top, float bottom)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PanBoundaryCalculator.Compute(new RoomBounds2D(-4f, -3f, 8f, 6f), 5f, 2f, 1f, top, bottom));
+        }
+
+        [TestCase(0f, 1f, 0f)]
+        [TestCase(-1f, 1f, 0f)]
+        [TestCase(float.NaN, 1f, 0f)]
+        [TestCase(float.PositiveInfinity, 1f, 0f)]
+        [TestCase(5f, 0f, 0f)]
+        [TestCase(5f, float.NaN, 0f)]
+        [TestCase(5f, float.PositiveInfinity, 0f)]
+        [TestCase(5f, 1f, -1f)]
+        [TestCase(5f, 1f, float.NaN)]
+        [TestCase(5f, 1f, float.PositiveInfinity)]
+        [TestCase(float.MaxValue, float.MaxValue, 0f)]
+        public void Compute_InvalidOrOverflowedGeometryThrows(float size, float aspect, float margin)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                PanBoundaryCalculator.Compute(new RoomBounds2D(-4f, -3f, 8f, 6f), size, aspect, margin));
+        }
+
+        [Test]
+        public void Compute_DefaultBoundsThrows()
+        {
+            Assert.Throws<ArgumentException>(() => PanBoundaryCalculator.Compute(default, 5f, 1f, 0f));
+        }
+
+        [TestCase(10f, -0.125f, 9.875f)]
+        [TestCase(10f, 0.125f, 10f)]
+        [TestCase(10f, 0f, 10f)]
+        [TestCase(10f, -100f, -2f)]
+        [TestCase(-10f, 0.125f, -9.875f)]
+        [TestCase(-10f, -0.125f, -10f)]
+        [TestCase(-10f, 0f, -10f)]
+        [TestCase(-10f, 100f, 2f)]
+        [TestCase(0f, 100f, 2f)]
+        [TestCase(0f, -100f, -2f)]
+        public void Clamp_NormalRangeOnlyLimitsRequestedDelta(float current, float delta, float expected)
+        {
+            var range = new PanAxisRange(-2f, 2f, false);
+            Assert.That(range.ClampDelta(current, delta), Is.EqualTo(expected));
+            Assert.That(range.Clamp(current, current + delta), Is.EqualTo(expected));
+        }
+
+        [TestCase(10f, -0.125f, 9.875f)]
+        [TestCase(10f, 0.125f, 10f)]
+        [TestCase(10f, 0f, 10f)]
+        [TestCase(10f, -100f, 2f)]
+        [TestCase(-10f, 0.125f, -9.875f)]
+        [TestCase(-10f, -0.125f, -10f)]
+        [TestCase(-10f, 0f, -10f)]
+        [TestCase(-10f, 100f, -2f)]
+        [TestCase(0f, 100f, 0f)]
+        [TestCase(0f, -100f, 0f)]
+        [TestCase(-2f, 1f, -2f)]
+        [TestCase(2f, -1f, 2f)]
+        public void Clamp_CollapsedRangeAllowsOnlyMinimalRecovery(float current, float delta, float expected)
+        {
+            var range = new PanAxisRange(-2f, 2f, true);
+            Assert.That(range.ClampDelta(current, delta), Is.EqualTo(expected));
+            Assert.That(range.Clamp(current, current + delta), Is.EqualTo(expected));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ClosestSafeCoordinate_ReturnsNearestEndpointOrCurrentWithoutInput(bool collapsed)
+        {
+            var range = new PanAxisRange(-2f, 3f, collapsed);
+            Assert.That(range.ClosestSafeCoordinate(-100f), Is.EqualTo(-2f));
+            Assert.That(range.ClosestSafeCoordinate(100f), Is.EqualTo(3f));
+            Assert.That(range.ClosestSafeCoordinate(1f), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ClampDelta_CenterUsesIndependentAxisRules()
+        {
+            var range = new PanCenterRange(new PanAxisRange(-2f, 2f, false), new PanAxisRange(-3f, 3f, true));
+            var current = new Point2D(10f, -10f);
+            Assert.That(range.ClampDelta(current, new Point2D(-0.125f, 0.25f)), Is.EqualTo(new Point2D(9.875f, -9.75f)));
+            Assert.That(range.ClosestSafeCoordinate(current), Is.EqualTo(new Point2D(2f, -3f)));
+        }
+
+        [Test]
+        public void Clamp_FiniteExtremeCoordinatesDoNotOverflowTheirDelta()
+        {
+            var range = new PanAxisRange(-2f, 2f, false);
+            Assert.That(range.Clamp(float.MaxValue, -float.MaxValue), Is.EqualTo(-2f));
+            Assert.That(range.Clamp(-float.MaxValue, float.MaxValue), Is.EqualTo(2f));
+            Assert.That(range.Clamp(float.MaxValue, 1f), Is.EqualTo(1f));
+            Assert.That(range.ClampDelta(float.MaxValue, float.MaxValue), Is.EqualTo(float.MaxValue));
+        }
+
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void Clamp_NonFiniteInputThrows(float invalid)
+        {
+            var range = new PanAxisRange(-2f, 2f, false);
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.Clamp(invalid, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.Clamp(0f, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.ClampDelta(0f, invalid));
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.ClosestSafeCoordinate(invalid));
         }
 
         [Test]
