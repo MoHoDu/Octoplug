@@ -29,6 +29,7 @@ The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode
 - `CameraZoomInputReader` reads `Mouse.current.scroll` and two-finger `Touchscreen` pinch through the New Input System. Its Inspector fields are `desktopScrollZoomSensitivity` (Mouse Wheel + Windows touchpad scroll, which the Input System cannot reliably tell apart, so they intentionally share one field) and `pinchZoomSensitivity` (independent, mobile pinch only); both default to `0.2`.
 - `HouseCameraZoomController` exclusively owns `CinemachineCamera.Lens.OrthographicSize`, including smoothing, the fixed minimum size `5`, dynamic House maximum, and full-bounds Hint framing.
 - A new Hint may require more zoom-out than the unlocked-House maximum because it is not yet in that union. Hint framing widens the effective range rather than clipping the Hint; later House recomputation preserves the larger current target so promotion does not implicitly zoom in.
+- 자동 Hint/Reveal은 다음 Hint까지 포함하되 추가 여백 없이 raw room bounds를 가용 화면에 담는 최소 크기만 요청한다. 이미 보이면 추가 축소하지 않는다. 초기 fit/수동 최대 범위/Pan의 margin2는 별도 유지하며, `max(target,current Lens)`로 같은 프레임의 먼 Hint 목표가 가까운 Reveal에 취소되지 않게 한다.
 
 ### Pan ownership and movement
 
@@ -49,6 +50,10 @@ The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode
 - Room Generation remains unaware of Camera, Cinemachine, Zoom, or Pan.
 
 ## Verification Evidence
+
+### TASK023 최소 자동 framing (2026-10-19, Human 확인 대기)
+- 기존 개선은7082cfa push 완료. 새 자동 Hint/Reveal margin0은 core178/178·집중 Editor71/71 PASS, 전체254/245 PASS/기존9 FAIL. Scene 변경 없음.
+- 실제 연속 생성에서 Room3 목표27→23.82353(new0 계산과 일치), 이미 보이는 Room4는23.82353 유지. 중심 불변·완료1회→RewardDelay 확인. 생성/보상 setup 호출과 실제 Mouse wheel/Pan/tiny drag/UI 차단 증거는 TASK023 handoff에 구분.
 
 ### TASK023 후속 (2026-10-19, 사용자 Human PASS)
 - 초기 fit/상하단 UI/manual zoom 연속보정 구현, core178/178·집중 Editor61/61 PASS 및 Unity compile completed. 전체244/235 PASS/기존9 FAIL. Scene 참조3줄만 변경, Zoom order0 < Brain order100 확인.

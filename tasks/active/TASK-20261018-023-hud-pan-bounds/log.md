@@ -39,3 +39,19 @@
 - CLI ready/stopped 응답 회복. InfiniteMode 메모리 dirty를 live saveAsCopy 사본으로 보존·디스크와 대조해 diff없음(exit0) 확인 후 저장, 빈 임시 테스트 Scene으로 전환. 강제종료/discard 없음.
 - 집중 CameraFraming61/61 PASS, 전체244/235 PASS/9 FAIL/0 skip. 기존211/202/9 대비 추가33개 통과, 기존9실패 목록동일. 이전 미실행 Input Entry는 소급 PASS 처리하지 않음.
 - Scene 디스크 참조3줄만 유지. 환경4개와 폰트 제외해 현재 branch checkpoint를 준비하며 새 개선 코드는 아직 미포함.
+
+## 2026-10-19 — checkpoint push 및 최소 자동 framing
+- 기존 개선 `7082cfa72f094c52a63184d5e676b2adabac7a14`를 origin/task/TASK-20261018-023-hud-pan-bounds로 push, local/remote HEAD 일치 확인. 환경4개/폰트 제외.
+- 사용자 “다음 Hint까지 포함” 선택 및 계획 승인에 따라, 이후 별도 변경으로 자동 Hint/Reveal fit margin만0으로 분리. 초기/dynamic/Pan margin2, 위치 보존/zoom-out-only/max(target,current) 유지.
+- production Zoom1개, Editor 테스트2개 수정. 기존4개 fixture/기대값 보정, 신규10case. compile completed, core178/178, 집중71/71 PASS. 전체254/245 PASS/기존과 동일9 FAIL/0skip.
+- 새 Play 초기 visible[-6,-3,12,9],1920x1080,상하단 inset0.1851852, S12.70588/중심(3,3)은 margin2 initial-fit 계산과 일치.
+- DebugAddExp→실제 GameFlow/방 생성 경로로 Room3 승격: 다음 Hint[-4,-12,4,-3], old margin2 목표27/new0 목표23.82353/실제target23.82353. Room4 승격은 promoted/다음 Hint가 이미 보여 S23.82353 유지(old padded27). 두 경우 중심(3,3) 불변·완료1회→RewardDelay 확인.
+- 최초 보상 확인 시 unfocused Player Loop가 정지해 CameraReveal 상태였음. runInBackground 원값을 보관하고 임시 true로 전환한 뒤 실제 Player Loop에서 정착·AwaitingReward 확인. 보상 종료는 내부 setup 호출이며 실제 UI 입력 검증으로 간주하지 않음.
+- 이미 보이는 seed Hint/Reveal 요청은 motion0/completion1/size불변. 실제 InputSystem Mouse wheel23.82353→8/8→12, 상하단 방향 drag/capture, 상단 Y5.962963 경계, zoom-out 뒤1px당0.02222world 이동 확인. 보상 내부 종료 setup 직후 첫 drag는 무이동(첫 capture 미계측), release 뒤 재시도 정상.
+- HUD 시작 drag는 EventSystem capture 유지/월드 진입 후에도 카메라 불변. Console groundTruth error0/compilationFailed=false, runtime 오류 없음. 기존 hatching root 미지정/RW007 미지원 경고는 별도 유지.
+- probe 장치0개, runInBackground=false/TimeScale1 복원 및 Play 종료. InfiniteMode roots7/clean, compile completed/errors0, Scene 디스크 checkpoint 대비 diff 없음. 원본 status 및 환경4개/폰트2356/9 보존.
+- 최종 verify-fast PASS(문서 길이 경고21건), TASK023 context Strict exit0/WARN(meta46, 검사 당시194줄, COMPACT_REQUIRED 없음), git diff --check PASS. staged 변경 없음/HEAD7082cfa 유지. 새 개선 HUMAN_VERIFY_REQUIRED, 미커밋·미push.
+
+## 2026-10-19 — 추가 Git 전달 승인
+- 사용자 “여기까지 수정 내용도 commit하고 push해줘. 그 다음 PR을 통해 통합하자.” 명시 요청. 현재9개 범위 파일만 전달하고 환경4개/폰트 제외. Git 요청을 Human PASS로 소급 간주하지 않음.
+- fetch 후 origin/dev는 현재 branch의 조상이며 기존 미통합 checkpoint2개(fcd4601/7082cfa), 열린 PR 없음. 새 commit과 함께 dev 대상 누적 PR로 통합하며 기존9실패 및 Human대기를 PR에 공개한다.

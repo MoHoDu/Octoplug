@@ -10,17 +10,17 @@
 - **Branch:** task/TASK-20261018-023-hud-pan-bounds
 - **Started:** 2026-10-18
 - **Updated:** 2026-10-19
-- **Current Stage:** checkpoint
+- **Current Stage:** verification
 - **Current Skill:** integrate-unity-editor
 - **Worktree:** D:/github-worktrees/Octoplug/shared-wall-outlet (독립 Library 순차 재사용)
 
 ## Allowed Scope
-- 승인 후속 계획: 최초 visible-house fit, 상하단 UI 가용 화면, manual zoom 연속 보정 및 delta-aware Pan.
-- Core PanBoundaryCalculator/신규 UsableViewport, Unity Pan/Zoom/InputReader/RoomGenerationCameraFramingBridge 및 관련 core/Editor 테스트.
+- 승인 새 후속: 다음 Hint까지 포함하는 자동 Hint/Reveal의 margin만0으로 변경. 초기 fit/dynamic max/Pan margin2와 위치 보존·zoom-out-only 유지.
+- Unity HouseCameraZoomController의 자동 fit 인자/tooltip, 관련 Zoom/Bridge Editor 및 필요 core 테스트만. 기존 UsableViewport 수식/Bridge/Scene/GameFlow 구현 변경 없음.
 - camera-framing map, Task 문서와 TASK008/018 한정 소유권 기록. 상세 파일·검증은 plan.md.
 
 ## Do Not Modify
-- 사용자 요청으로 기존 수정 checkpoint stage/commit/push만 허용. 후속 자동 push/merge/reset, 원본·다른 Editor, 범위 밖 파일 변경 금지.
+- 2026-10-19 사용자 명시 요청으로 현재 수정 commit/push 및 PR을 통한 dev 통합 허용. 원본·다른 Editor, 범위 밖 파일 변경/reset/force 금지.
 - HUD/주민 카드 layout·크기·Raycast, 입력 capture/우선순위, 렌더 rect, Brain/Package/ProjectSettings 유지.
 - 제품 위치/길이/밸런스, RoomGeneration/GameFlow 알고리즘, 기존 실패9건 유지.
 - 기존 환경 migration4개와 폰트 에셋 변경 보존·전달 제외. raw Unity YAML 수정 금지.
@@ -35,7 +35,7 @@
 ## Human Decisions
 - 기존 상단 HUD 수동 Pan 수정: 사용자 “잘 수정된 것 확인했어.” Human PASS.
 - 2026-10-19 후속 계획 승인: 초기 1회 fit/정렬, 하단 Residents_Area 반영, manual zoom 연속 최소 보정과 첫 drag snap 제거.
-- 기존 무입력 위치 보정 금지는 초기 fit/manual zoom에 한해 대체. Hint/Reveal 위치 보존 유지. 사용자 “문제가 잘 해결되었어” Human PASS 및 현재 수정 push 명시 요청.
+- 기존 개선 Human PASS 및 checkpoint push 완료(7082cfa). 새 자동 줌은 “다음 Hint까지 포함” 선택/계획 승인: 추가 여백만 제거, 위치 보존 유지. 이후 현재 변경의 Git 전달도 명시 승인.
 
 ## Open Decisions
 - 차단 결정 없음. 계획 밖 player-facing 정책이 필요하면 구현 전에 중단·확인.
@@ -43,4 +43,4 @@
 ## Verification State
 - 이전 수정: core61/61, 집중 Pan22/22, 전체211/202 PASS/9 FAIL. Scene clean, 사용자 Human PASS.
 - 후속 core178/178, 집중 Editor61/61 PASS; 전체244/235 PASS/기존9 FAIL. compile completed/참조3줄 diff. Scene 비교 동일 확인 후 저장, 테스트 차단 해제.
-- Verification: HUMAN_PASS, 기존9실패는 범위 밖 예외로 기록. 이전 미실행 자동 Input Entry를 소급 PASS로 주장하지 않음. checkpoint 준비.
+- Verification: HUMAN_VERIFY_REQUIRED(최소 Hint/Reveal). core178/178·집중71/71 PASS, 전체254/245 PASS/기존9 FAIL. 실제 생성·Mouse 입력/cleanup/Scene clean 확인. 사용자 요청 Git 전달 진행; Human PASS로 간주하지 않음.

@@ -100,6 +100,51 @@ namespace Octoplug.Tests.Editor.CameraFraming
             Assert.That(virtualCamera.transform.position, Is.EqualTo(center));
         }
 
+        [Test]
+        public void FartherNextHintThenNearerReveal_SameFrame_PreservesSmoothedTargetAndCompletesOnce()
+        {
+            var seed = Room("seed", -4f, -4f);
+            var promoted = Room("promoted", 4f, -4f);
+            SetUnlocked(seed);
+            RaiseHint(promoted);
+            zoom.TickForVerification(0.02f);
+            Assert.That(virtualCamera.Lens.OrthographicSize, Is.EqualTo(6f).Within(0.001f));
+            var center = virtualCamera.transform.position;
+            var serializedZoom = new SerializedObject(zoom);
+            serializedZoom.FindProperty("zoomSmoothing").floatValue = 0.15f;
+            serializedZoom.ApplyModifiedPropertiesWithoutUndo();
+            var motionStarted = 0;
+            var completed = 0;
+            var sizeAtCompletion = 0f;
+            zoom.CameraMotionStarted += () => motionStarted++;
+            bridge.CameraRevealCompleted += () =>
+            {
+                completed++;
+                sizeAtCompletion = virtualCamera.Lens.OrthographicSize;
+            };
+
+            // 실제 생성/UI 입력이 아닌 이벤트 연결 검증이다. 다음 Hint와 GameFlow의
+            // 승격방 Reveal 요청 사이에 tick을 넣지 않아 실제 호출 순서를 재현한다.
+            SetUnlocked(seed, promoted);
+            RaiseHint(Room("farther-next", 20f, 12f));
+            bridge.RequestRoomReveal(promoted);
+
+            Assert.That(virtualCamera.Lens.OrthographicSize, Is.EqualTo(6f).Within(0.001f));
+            Assert.That(completed, Is.Zero, "An already-visible promoted room must await the farther Hint target.");
+            Assert.That(motionStarted, Is.EqualTo(1));
+            zoom.TickForVerification(0.02f);
+            Assert.That(virtualCamera.Lens.OrthographicSize, Is.InRange(6.001f, 19.999f));
+            Assert.That(completed, Is.Zero);
+            for (var i = 0; i < 200; i++) zoom.TickForVerification(0.02f);
+
+            // 중심 Y=0을 유지할 때 방 상단은 Y=20이며 여백 때문에 size2를 더하면 안 된다.
+            Assert.That(virtualCamera.Lens.OrthographicSize, Is.EqualTo(20f).Within(0.001f));
+            Assert.That(sizeAtCompletion, Is.EqualTo(20f).Within(0.001f));
+            Assert.That(virtualCamera.transform.position, Is.EqualTo(center));
+            Assert.That(motionStarted, Is.EqualTo(1));
+            Assert.That(completed, Is.EqualTo(1));
+        }
+
         private void SetUnlocked(params RoomPlacement[] rooms)
         {
             typeof(ProductionRoomGenerationController).GetField("state", PrivateInstance)

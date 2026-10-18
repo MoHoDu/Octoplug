@@ -92,6 +92,115 @@ namespace Octoplug.Tests.Editor.CameraFraming
             Assert.That(completed, Is.EqualTo(1));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HintOrReveal_WhenOnlyPaddingFallsOutsideUsableViewport_DoesNotMoveOrZoom(bool reveal)
+        {
+            CreatePan();
+            CreateInset("topHudArea", 0.2f, true);
+            CreateInset("bottomResidentsArea", 0.1f, false);
+            SetSmoothing(0.15f);
+            var center = cinemachineCamera.transform.position;
+            var motionStarted = 0;
+            var completed = 0;
+            controller.CameraMotionStarted += () => motionStarted++;
+            controller.CameraRevealCompleted += () => completed++;
+            // size5의 가용 Y 구간은 [-4, 3]. 방 경계는 보이지만 margin2를 더하면 벗어난다.
+            var bounds = new RoomBounds2D(-9f, -3.5f, 18f, 6f);
+
+            if (reveal) controller.RequestRoomReveal(bounds);
+            else controller.RequestHintFraming(bounds);
+
+            Assert.That(completed, Is.EqualTo(reveal ? 1 : 0));
+            Assert.That(motionStarted, Is.Zero);
+            for (var i = 0; i < 200; i++) controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(5f));
+            Assert.That(cinemachineCamera.transform.position, Is.EqualTo(center));
+            Assert.That(motionStarted, Is.Zero);
+            Assert.That(completed, Is.EqualTo(reveal ? 1 : 0));
+        }
+
+        [TestCase(false, true, 8f)]
+        [TestCase(true, true, 8f)]
+        [TestCase(false, false, 7.5f)]
+        [TestCase(true, false, 7.5f)]
+        public void HintOrReveal_PartiallyOccludedEdge_UsesMinimumRawBoundsSize(
+            bool reveal, bool topEdge, float expectedSize)
+        {
+            CreatePan();
+            CreateInset("topHudArea", 0.25f, true);
+            CreateInset("bottomResidentsArea", 0.1f, false);
+            var center = cinemachineCamera.transform.position;
+            var motionStarted = 0;
+            var completed = 0;
+            controller.CameraMotionStarted += () => motionStarted++;
+            controller.CameraRevealCompleted += () => completed++;
+            // 상단은 4 / (1 - 2 * .25), 하단은 6 / (1 - 2 * .1) 크기가 필요하다.
+            var bounds = topEdge
+                ? new RoomBounds2D(-1f, 1f, 2f, 3f)
+                : new RoomBounds2D(-1f, -6f, 2f, 3f);
+
+            if (reveal) controller.RequestRoomReveal(bounds);
+            else controller.RequestHintFraming(bounds);
+
+            Assert.That(completed, Is.Zero);
+            controller.TickForVerification(0.02f);
+            controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(expectedSize).Within(0.001f));
+            Assert.That(cinemachineCamera.transform.position, Is.EqualTo(center));
+            Assert.That(motionStarted, Is.EqualTo(1));
+            Assert.That(completed, Is.EqualTo(reveal ? 1 : 0));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HintOrReveal_RepeatedPendingRequest_DoesNotAccumulateZoomOrCompletion(bool reveal)
+        {
+            SetSmoothing(0.15f);
+            var center = cinemachineCamera.transform.position;
+            var motionStarted = 0;
+            var completed = 0;
+            controller.CameraMotionStarted += () => motionStarted++;
+            controller.CameraRevealCompleted += () => completed++;
+            var bounds = new RoomBounds2D(-1f, -8f, 2f, 16f);
+
+            for (var i = 0; i < 3; i++)
+            {
+                if (reveal) controller.RequestRoomReveal(bounds);
+                else controller.RequestHintFraming(bounds);
+                controller.TickForVerification(0.02f);
+                Assert.That(completed, Is.Zero);
+            }
+
+            for (var i = 0; i < 200; i++) controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(8f).Within(0.001f));
+            Assert.That(cinemachineCamera.transform.position, Is.EqualTo(center));
+            Assert.That(motionStarted, Is.EqualTo(1));
+            Assert.That(completed, Is.EqualTo(reveal ? 1 : 0));
+        }
+
+        [Test]
+        public void InitialFitDynamicMaximumAndPan_RetainHouseMarginTwo()
+        {
+            CreatePan();
+            controller.QueueInitialFraming(new RoomBounds2D(-4f, -6f, 8f, 12f));
+            controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(8f).Within(0.001f));
+            Assert.That(cinemachineCamera.transform.position, Is.EqualTo(Vector3.zero));
+
+            controller.RecomputeDynamicMaxOrthographicSize(new RoomBounds2D(-20f, -15f, 40f, 30f));
+            controller.ApplyZoomDelta(100f);
+            controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(17f).Within(0.001f));
+
+            controller.ApplyZoomDelta(-100f);
+            controller.TickForVerification(0.02f);
+            pan.ApplyPanDelta(new Vector2(100f, 100f));
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(5f));
+            Assert.That(cinemachineCamera.transform.position.x, Is.EqualTo(12f).Within(0.001f));
+            Assert.That(cinemachineCamera.transform.position.y, Is.EqualTo(12f).Within(0.001f));
+        }
+
         [Test]
         public void ApplyZoomDelta_WhenTargetChanges_RaisesMotionStarted()
         {
@@ -268,7 +377,7 @@ namespace Octoplug.Tests.Editor.CameraFraming
             CreateInset("bottomResidentsArea", 0.1f, false);
             controller.RequestHintFraming(new RoomBounds2D(-1f, -4f, 2f, 8f));
             controller.TickForVerification(0.02f);
-            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(15f).Within(0.001f));
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(10f).Within(0.001f));
             Assert.That(cinemachineCamera.transform.position, Is.EqualTo(Vector3.zero));
         }
 
@@ -305,7 +414,7 @@ namespace Octoplug.Tests.Editor.CameraFraming
             Assert.That(completed, Is.Zero);
             controller.TickForVerification(0.02f);
             Assert.That(completed, Is.EqualTo(1));
-            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(8f).Within(0.001f));
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(6f).Within(0.001f));
         }
 
         [Test]
@@ -316,7 +425,8 @@ namespace Octoplug.Tests.Editor.CameraFraming
             var hud = CreateInset("topHudArea", 0.1f, true);
             var completed = 0;
             controller.CameraRevealCompleted += () => completed++;
-            controller.RequestRoomReveal(new RoomBounds2D(-1f, -4f, 2f, 8f));
+            controller.RequestRoomReveal(new RoomBounds2D(-1f, -6f, 2f, 12f));
+            Assert.That(completed, Is.Zero, "The raw bounds must require zoom-out before the viewport changes.");
             hud.sizeDelta = new Vector2(0f, Screen.height * 0.6f);
             Canvas.ForceUpdateCanvases();
             controller.TickForVerification(0.02f);
@@ -332,7 +442,7 @@ namespace Octoplug.Tests.Editor.CameraFraming
         {
             CreatePan();
             var hud = CreateInset("topHudArea", 0.6f, true);
-            controller.RequestHintFraming(new RoomBounds2D(-1f, -4f, 2f, 8f));
+            controller.RequestHintFraming(new RoomBounds2D(-1f, -6f, 2f, 12f));
             controller.TickForVerification(0.02f);
             Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(5f));
             hud.gameObject.SetActive(false);

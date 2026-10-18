@@ -31,7 +31,7 @@ namespace Octoplug.CameraFraming.Unity
         [SerializeField]
         private float minOrthographicSize = 5f;
 
-        [Tooltip("[Zoom] / [Hint Framing] World-unit padding kept around the house bounds and framed room bounds.")]
+        [Tooltip("최초 화면 fit과 수동 Zoom 범위 계산에 사용하는 집 경계 여백(world units). 자동 Hint/Reveal에는 적용하지 않습니다.")]
         [FormerlySerializedAs("houseFramingMargin")]
         [SerializeField]
         private float houseFramingMargin = 2f;
@@ -352,8 +352,9 @@ namespace Octoplug.CameraFraming.Unity
             var position = cinemachineCamera.transform.position;
             // Brain 반영 전의 output Camera 대신 authoritative 가상 카메라 중심/Lens를 사용한다.
             var baseline = Mathf.Max(targetOrthographicSize, cinemachineCamera.Lens.OrthographicSize);
+            // 자동 Hint/Reveal은 추가 여백 없이 방 전체가 보이는 최소 크기까지만 넓힌다.
             if (!viewport.TryComputeFixedCenterFit(bounds, new Point2D(position.x, position.y),
-                outputCamera.aspect, houseFramingMargin, baseline, out var size))
+                outputCamera.aspect, 0f, baseline, out var size))
             {
                 return false;
             }
