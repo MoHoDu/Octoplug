@@ -3,8 +3,14 @@
 ## Status
 - Current stage: verification. 새 최소 자동 Hint/Reveal 구현·자동 검증 완료, Human 확인 대기. 기존 초기 fit/Residents_Area/manual 연속보정은 사용자 Human PASS.
 - 선행 카메라 checkpoint `7082cfa72f094c52a63184d5e676b2adabac7a14` push 및 local/remote HEAD 일치 확인 완료. 이후 사용자 명시 요청으로 새 margin0 변경 commit/push 및 dev 대상 PR 통합 진행.
-- Branch: `task/TASK-20261018-023-hud-pan-bounds`; Worktree: `D:/github-worktrees/Octoplug/shared-wall-outlet`. 원본/dev merge 없음.
+- Branch: `task/TASK-20261018-023-hud-pan-bounds`; Worktree: `D:/github-worktrees/Octoplug/shared-wall-outlet`. PR#1의 P2 수정·검증 후 원격 dev 병합 승인; 원본 checkout 적용 없음.
 - TASK021 Human PASS, TASK022 Human대기 유지. 선행 checkpoint fcd4601도 별도 branch에 push 완료.
+
+## PR#1 검토 후속 (2026-10-19)
+- 사용자 “그 문제 수정하고 검증한 다음 PR 병합해줘.” 승인. queued Pan이 있으면 Reveal 완료를 보류, 기존 tick의 Pan 적용 후 가시성으로 재판정. 큐 없음/상쇄 시 즉시 완료 유지.
+- 수정 전 Editor 회귀4/4실패(완료 시 center expected-.2/actual0) 재현. 수정 후 집중76/76 PASS(신규5), 전체259 중250 PASS/동일9 FAIL, core178/178·RoomGeneration66/66 PASS, compile completed.
+- Zoom/Pan 코드2개·Editor 테스트1개 최소 diff 재검토: 기존 P2 해결, 새 확정 회귀 없음. 실제 Mouse→PixelPan→같은 프레임 Reveal: 요청 frame384/완료0, 완료 frame469/1회, x3→2.981482, size5→5.010417, 화면우측=방우측11.888890 PASS. Reveal bounds는 내부 setup이며 실제 방 승격은 이 probe에서 미실행.
+- 첫 probe의 size8은 collapsed X 고정으로 이동 assertion 실패; 실제 이동 가능한 size5로 setup 정정해 PASS. 장치0/background=false/timeScale1 복원·Play종료, InfiniteMode clean/Scene diff없음/Console groundTruth errors0. fast PASS(문서길이21경고)/context WARN(226줄, 하드 초과 없음)/diff PASS. 최신 commit/push·병합 결과는 PR#1에 기록한다.
 
 ## 새 개선 / 승인 경계
 - 사용자 선택은 **다음 Hint까지 포함**. production `HouseCameraZoomController.TryApplyFixedCenterFraming`만 margin0 적용, tooltip 정정.

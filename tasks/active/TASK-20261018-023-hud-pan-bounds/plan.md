@@ -20,6 +20,11 @@
 - TASK023 문서 및 camera-framing map. 기존 TASK008/018 한정 이관 범위 유지.
 - UsableViewport 수식/Bridge/RoomGeneration/GameFlow/Scene/UI/Package/ProjectSettings 변경 없음.
 
+## PR 검토 후속 (2026-10-19 사용자 승인)
+- Pan 큐가 비어 있지 않으면 Reveal 즉시 완료를 보류하고 기존 pre-Brain tick에서 Pan 적용 후 재판정한다. 큐가 없으면 기존 즉시 완료 유지.
+- Zoom/Pan 코드와 Editor 회귀만 수정. 가려짐/가려지지 않음·smoothing·상쇄 입력을 검증하고 기존9실패와 Human대기는 별도 유지한다.
+- 수정 전 회귀 실패→수정 후 집중/전체 검증, 코드 재검토 후 현재 PR에 commit/push 및 dev 병합. 환경4개/폰트·원본 workspace 제외.
+
 ## Verification
 - 기준: core178/178, 집중 Editor61/61, 전체244/235 PASS/기존9 FAIL. 새 개선 Human 확인 별도.
 - 이미 보임/padding만 화면 밖/상하단 부분 가림/반복 요청/비영 smoothing/먼 Hint→가까운 Reveal 같은 프레임 회귀.

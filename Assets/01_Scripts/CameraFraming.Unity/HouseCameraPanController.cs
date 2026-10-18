@@ -38,6 +38,8 @@ namespace Octoplug.CameraFraming.Unity
         private Vector2 queuedPixelDelta;
         private HouseCameraZoomController frameDriver;
 
+        internal bool HasQueuedPixelPan => queuedPixelDelta != Vector2.zero;
+
         public event Action CameraMotionStarted;
 
         private void OnValidate()

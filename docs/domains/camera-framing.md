@@ -40,7 +40,7 @@ The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode
 - `HouseCameraPanController` moves only the `CinemachineCamera` transform. It applies the latest cached "visible house" bounds (see below), the **current** Lens size, the **current** output aspect, and `panBoundaryMargin` — recomputed fresh on every single Pan request, never cached as a fixed world-space range. Zoom In/Out therefore widens/narrows the reachable range immediately, with no Room Generation event required. Main Camera is never arbitrarily transformed.
 - `HouseCameraPanController.topHudArea`/`bottomResidentsArea`는 InfiniteMode의 기존 `Canvas/HUD_Area`/`Canvas/Residents_Area`에 연결한다. world corners→screen→`outputCamera.pixelRect` 교집합으로 상하단 가림을 구하고 Zoom도 같은 결과를 사용한다. 각 UI 미지정/비활성/Canvas disabled/해당 가장자리 비겹침은 inset0; viewport0/전면 가림은 적용을 보류한다. 고정 HUD 픽셀 크기는 사용하지 않는다.
 - TASK023 후속 승인: 시작 생성과 Canvas layout 준비 후 최신 visible-house를 가용 화면에 1회 fit/정렬한다. 이후 수동 zoom에는 기존 smoothing 시간으로 최근접 안전 위치까지 연속 보정하되 drag delta에는 지연을 추가하지 않는다. Hint/Reveal/resize 자체는 위치 보존; 범위 밖에서도 다음 작은 drag를 큰 clamp로 바꾸지 않는다.
-- Zoom이 pre-Brain LateUpdate를 구동하여 최신 Lens→manual 보정→수집된 pixel Pan 변환/적용→Reveal 완료 순서를 보장한다. 기존 world-delta public 호출은 즉시 적용한다. Hint/Reveal은 유효한 가용 화면에서 위치 고정·zoom-out-only target을 구하고, 불가능한 fit은 pending으로 보관한다.
+- Zoom이 pre-Brain LateUpdate를 구동하여 최신 Lens→manual 보정→수집된 pixel Pan 변환/적용→Reveal 완료 순서를 보장한다. queued Pan이 남아 있으면 already-visible Reveal도 즉시 완료하지 않고 Pan 적용 후 가시성으로 재판정한다. 큐가 없거나 입력이 상쇄되면 기존 즉시 완료를 유지한다. 기존 world-delta public 호출은 즉시 적용한다. Hint/Reveal은 유효한 가용 화면에서 위치 고정·zoom-out-only target을 구하고, 불가능한 fit은 pending으로 보관한다.
 
 ### Room Generation bridge
 
@@ -50,6 +50,9 @@ The production integration is wired fresh in `Assets/00_Scenes/Demo/InfiniteMode
 - Room Generation remains unaware of Camera, Cinemachine, Zoom, or Pan.
 
 ## Verification Evidence
+
+### PR#1 queued Pan 완료 순서 (2026-10-19)
+- 수정 전 회귀4/4실패→가드 추가 후 집중 Editor76/76 PASS(신규5), 전체259/250 PASS/동일9 FAIL, 순수 camera178/178·room66/66 PASS. 실제 Mouse 입력 뒤 같은 프레임 Reveal은 즉시완료0/최종가시성확보뒤완료1회. 최소diff 재검토 완료, 상세/검증 setup 한계는 TASK023 handoff 참조.
 
 ### TASK023 최소 자동 framing (2026-10-19, Human 확인 대기)
 - 기존 개선은7082cfa push 완료. 새 자동 Hint/Reveal margin0은 core178/178·집중 Editor71/71 PASS, 전체254/245 PASS/기존9 FAIL. Scene 변경 없음.

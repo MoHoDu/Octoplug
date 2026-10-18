@@ -16,7 +16,7 @@
 
 ## Allowed Scope
 - 승인 새 후속: 다음 Hint까지 포함하는 자동 Hint/Reveal의 margin만0으로 변경. 초기 fit/dynamic max/Pan margin2와 위치 보존·zoom-out-only 유지.
-- Unity HouseCameraZoomController의 자동 fit 인자/tooltip, 관련 Zoom/Bridge Editor 및 필요 core 테스트만. 기존 UsableViewport 수식/Bridge/Scene/GameFlow 구현 변경 없음.
+- Unity Zoom/Pan 및 관련 Editor 테스트: 2026-10-19 사용자 요청으로 PR 검토 P2(queued Pan 전 Reveal 즉시 완료)를 수정·검증 후 commit/push·PR 병합. 기존 UsableViewport 수식/Bridge/Scene/GameFlow 구현 변경 없음.
 - camera-framing map, Task 문서와 TASK008/018 한정 소유권 기록. 상세 파일·검증은 plan.md.
 
 ## Do Not Modify
@@ -43,4 +43,4 @@
 ## Verification State
 - 이전 수정: core61/61, 집중 Pan22/22, 전체211/202 PASS/9 FAIL. Scene clean, 사용자 Human PASS.
 - 후속 core178/178, 집중 Editor61/61 PASS; 전체244/235 PASS/기존9 FAIL. compile completed/참조3줄 diff. Scene 비교 동일 확인 후 저장, 테스트 차단 해제.
-- Verification: HUMAN_VERIFY_REQUIRED(최소 Hint/Reveal). core178/178·집중71/71 PASS, 전체254/245 PASS/기존9 FAIL. 실제 생성·Mouse 입력/cleanup/Scene clean 확인. 사용자 요청 Git 전달 진행; Human PASS로 간주하지 않음.
+- Verification: HUMAN_VERIFY_REQUIRED(최소 Hint/Reveal). PR#1 P2 수정: red4/4→집중76/76, core178/178·RoomGeneration66/66 PASS; 전체259/250 PASS/동일9 FAIL. 후속 수정·검증·병합 사용자 승인, Human PASS로 소급하지 않음.

@@ -92,6 +92,63 @@ namespace Octoplug.Tests.Editor.CameraFraming
             Assert.That(completed, Is.EqualTo(1));
         }
 
+        [TestCase(false, 0f)]
+        [TestCase(true, 0f)]
+        [TestCase(false, 0.15f)]
+        [TestCase(true, 0.15f)]
+        public void Reveal_AlreadyVisibleWithQueuedPan_CompletesOnlyAfterFinalVisibility(
+            bool movesRoomOutside, float smoothing)
+        {
+            CreatePan();
+            SetSmoothing(smoothing);
+            outputCamera.pixelRect = new Rect(0f, 0f, 1000f, 500f);
+            outputCamera.aspect = 2f;
+            var bounds = movesRoomOutside
+                ? new RoomBounds2D(8f, -1f, 2f, 2f)
+                : new RoomBounds2D(-1f, -1f, 2f, 2f);
+            var completed = 0;
+            controller.CameraRevealCompleted += () =>
+            {
+                completed++;
+                // 완료 이벤트 자체가 최종 Pan 위치와 방 전체 가시성을 보장해야 한다.
+                var center = cinemachineCamera.transform.position;
+                var halfWidth = cinemachineCamera.Lens.OrthographicSize * outputCamera.aspect;
+                Assert.That(center.x, Is.EqualTo(-0.2f).Within(0.00001f));
+                Assert.That(center.x - halfWidth, Is.LessThanOrEqualTo(bounds.MinX + 0.00001f));
+                Assert.That(center.x + halfWidth, Is.GreaterThanOrEqualTo(bounds.MaxX - 0.00001f));
+            };
+
+            pan.QueuePixelPanDelta(new Vector2(10f, 0f), 1f);
+            controller.RequestRoomReveal(bounds);
+            Assert.That(completed, Is.Zero);
+
+            controller.TickForVerification(0.02f);
+            Assert.That(cinemachineCamera.transform.position.x, Is.EqualTo(-0.2f).Within(0.00001f));
+            Assert.That(completed, Is.EqualTo(movesRoomOutside ? 0 : 1));
+            for (var i = 0; i < 200; i++) controller.TickForVerification(0.02f);
+            Assert.That(completed, Is.EqualTo(1));
+            Assert.That(cinemachineCamera.Lens.OrthographicSize,
+                Is.EqualTo(movesRoomOutside ? 5.1f : 5f).Within(0.00001f));
+        }
+
+        [Test]
+        public void Reveal_CancelledQueuedPan_KeepsImmediateCompletion()
+        {
+            CreatePan();
+            var completed = 0;
+            controller.CameraRevealCompleted += () => completed++;
+            pan.QueuePixelPanDelta(new Vector2(10f, 0f), 1f);
+            pan.QueuePixelPanDelta(new Vector2(-10f, 0f), 1f);
+
+            controller.RequestRoomReveal(new RoomBounds2D(-1f, -1f, 2f, 2f));
+
+            Assert.That(completed, Is.EqualTo(1));
+            controller.TickForVerification(0.02f);
+            Assert.That(completed, Is.EqualTo(1));
+            Assert.That(cinemachineCamera.transform.position, Is.EqualTo(Vector3.zero));
+            Assert.That(cinemachineCamera.Lens.OrthographicSize, Is.EqualTo(5f));
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void HintOrReveal_WhenOnlyPaddingFallsOutsideUsableViewport_DoesNotMoveOrZoom(bool reveal)

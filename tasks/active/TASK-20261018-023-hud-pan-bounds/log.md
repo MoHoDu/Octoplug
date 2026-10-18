@@ -55,3 +55,13 @@
 ## 2026-10-19 — 추가 Git 전달 승인
 - 사용자 “여기까지 수정 내용도 commit하고 push해줘. 그 다음 PR을 통해 통합하자.” 명시 요청. 현재9개 범위 파일만 전달하고 환경4개/폰트 제외. Git 요청을 Human PASS로 소급 간주하지 않음.
 - fetch 후 origin/dev는 현재 branch의 조상이며 기존 미통합 checkpoint2개(fcd4601/7082cfa), 열린 PR 없음. 새 commit과 함께 dev 대상 누적 PR로 통합하며 기존9실패 및 Human대기를 PR에 공개한다.
+
+## 2026-10-19 — PR#1 검토 P2 수정
+- 최소 framing50b4e52 commit/push 완료, PR#1 생성. 최초 merge는 Merge Without Review로 차단돼 우회하지 않음. 사용자 검토 요청 후 queued Pan보다 Reveal 완료가 앞서는 P2 확인·PR 리뷰 게시, 병합 보류.
+- 사용자 “그 문제 수정하고 검증한 다음 PR 병합해줘.” 승인으로 Zoom/Pan 및 회귀 범위 갱신. Power/생성 후보는 production 도달 증거 부족으로 지적에서 제외.
+- 격리 Editor ready/stopped/InfiniteMode clean 확인. unity status는 일시 no instances였으나 Pipeline 및 정확한 project-path editor_status는 정상. 빈 Scene 전환 eval은 timeout 뒤 실제 전환 완료/clean을 확인해 중복 실행하지 않음.
+- 신규 queued-before-Reveal 회귀4case는 수정 전 모두 FAIL(expected center-.2/actual0). Pan HasQueuedPixelPan을 실제 큐 소비와 같은 Vector2 비교로 노출하고 완료 조건에 가드 추가. 상쇄 입력1case 추가.
+- compile completed, 집중76/76 PASS, 전체259/250 PASS/동일9 FAIL/skip0, 순수 camera178/178·room66/66 PASS. 최소3파일 직접 재검토에서 기존P2해결/새확정회귀없음. Scene/Prefab 변경 없음.
+- 첫 실제 Mouse probe는 size8에서 집보다 화면이 넓은 collapsed X축을 선택해 Pan이 원래 정책대로 고정됨. immediateCompleted0/이후완료1이었으나 probe의 필수이동 assertion은 실패. PanBoundaryCalculator의 collapsed 고정 계약과 실제 bounds[-6,-3]–[12,9]로 setup 문제를 확인하고, production 변경 없이 수평 이동 가능한 size5로 재검증.
+- 실제 Mouse Dynamic 입력→PixelPan subscriber 이후 같은 프레임 Reveal: frame384 x3/size5/roomMax11.888890/즉시완료0; frame469 완료1회 x2.981482/size5.010417/화면우측11.888890로 PASS. Reveal 대상 bounds만 내부 setup이며 실제 생성 승격 검증과 구분.
+- probe 장치0, background=false/timeScale1 원복, Play 종료. InfiniteMode clean/roots7/Scene diff없음, console groundTruth errors0(기존buffer9/경고2는별도), 원본 status와 환경4개·폰트2356/9 불변. PR#1에 후속 검토·검증·Git 결과를 남기며 Human대기로 Task active 유지.

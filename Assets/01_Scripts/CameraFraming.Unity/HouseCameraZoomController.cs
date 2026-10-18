@@ -373,7 +373,9 @@ namespace Octoplug.CameraFraming.Unity
 
         private void CompleteRevealIfSettled()
         {
+            // 입력 수집 뒤의 요청은 Pan 적용 후 최종 가시성으로 완료를 판정한다.
             if (!revealCompletionPending || initialFramingPending || hintFramingPending
+                || (cameraPan != null && cameraPan.HasQueuedPixelPan)
                 || !TryGetUsableViewport(out var viewport)
                 || !TryApplyFixedCenterFraming(revealBounds, viewport)
                 || !Mathf.Approximately(cinemachineCamera.Lens.OrthographicSize, targetOrthographicSize))

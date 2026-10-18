@@ -18,6 +18,12 @@
 - [x] Domain Map/handoff/log, fast PASS/context Strict WARN(하드 초과 없음)/diff PASS 및 Scene 불변 확인.
 - [ ] 새 최소 자동 줌 개선 Human Play Check.
 
+## PR 검토 P2 후속
+- [x] 사용자 수정·검증 후 PR 병합 요청, Zoom/Pan 한정 범위 반영.
+- [x] queued Pan 전 Reveal 완료 회귀: 수정 전4/4실패→Pan 큐 가드 수정 후 집중76/76 PASS.
+- [x] 집중76/76·전체259/250 PASS/기존9 FAIL, 순수178+66 PASS, 재검토·실제Mouse 완료순서 PASS, cleanup·문서 기록.
+- [ ] 후속 commit/push, PR 검토 갱신 및 dev 병합 확인.
+
 ## 제외
 - 현재 변경 commit/push 및 dev PR 통합은 사용자 명시 승인. 원본 checkout 적용/범위 밖 변경은 제외.
 - 환경 migration4개와 기존 폰트 glyph 데이터 변경 보존·전달 제외.
